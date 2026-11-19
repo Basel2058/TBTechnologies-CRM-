@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 760px">
+  <div class="card-header"><i class="bi bi-person text-primary"></i> {{ customer.display_name }}</div>
+  <form method="post" class="card-body" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+    <div class="hint mb-3"><i class="bi bi-lightbulb"></i> موعد قريب (اليوم أو غداً)، قصير (15 دقيقة)، وفي وقت يختاره هو — يقلل الغياب.</div>
+    <div class="row g-2">
+      <div class="col-md-6 {% if form.scheduled_at.errors %}has-error{% endif %}">
+        <label class="form-label" for="id_scheduled_at">{{ form.scheduled_at.label }} <span class="text-danger">*</span></label>
+        {{ form.scheduled_at }}
+        <div class="quick-picks">
+          <button class="btn btn-light border" data-quick="2h" data-target="id_scheduled_at">بعد ساعتين</button>
+          <button class="btn btn-light border" data-quick="tomorrow10" data-target="id_scheduled_at">غداً 10:00</button>
+          <button class="btn btn-light border" data-quick="tomorrow15" data-target="id_scheduled_at">غداً 15:00</button>
+          <button class="btn btn-light border" data-quick="2d" data-target="id_scheduled_at">بعد يومين</button>
+        </div>
+        {% for error in form.scheduled_at.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+      </div>
+      <div class="col-md-6">{% field form.meeting_type %}</div>
+      <div class="col-md-12">{% field form.location %}</div>
+      {% if form.product %}<div class="col-md-6">{% field form.product %}</div>{% endif %}
+      {% if form.presenter %}<div class="col-md-6">{% field form.presenter %}</div>{% endif %}
+      {% if form.attendees %}<div class="col-md-12">{% field form.attendees %}</div>{% endif %}
+      {% if form.notes %}<div class="col-md-12">{% field form.notes %}</div>{% endif %}
+    </div>
+    <div class="d-flex gap-2 mt-2">
+      <button class="btn btn-primary px-4" type="submit">حفظ</button>
+      <a class="btn btn-light border" href="{% if appointment %}{% url 'appointment_detail' appointment.pk %}{% else %}{{ customer.get_absolute_url }}{% endif %}">إلغاء</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

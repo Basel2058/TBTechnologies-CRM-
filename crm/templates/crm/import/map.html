@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}تحديد الأعمدة{% endblock %}
+{% block page_title %}استيراد: {{ filename }}{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-header"><span class="pill stage-interested">خطوة 2 من 2</span> ماذا يعني كل عمود؟
+    <span class="header-actions small text-muted">{{ row_count }} صف</span>
+  </div>
+  <form method="post" class="card-body">
+    {% csrf_token %}
+    {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+    {% if truncated %}<div class="alert alert-warning">الملف فيه أكثر من {{ max_rows }} صف — سيُستورد أول {{ max_rows }} فقط. قسّم الملف واستورد الباقي بعدها.</div>{% endif %}
+    <div class="hint mb-3">خمّنّا معنى كل عمود من عنوانه. راجع الاختيارات وصحّح ما يلزم، ثم اضغط «استيراد».</div>
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead><tr><th>العمود في الملف</th><th>أمثلة من الملف</th><th style="min-width: 220px">يعني في النظام</th></tr></thead>
+        <tbody>
+          {% for col in columns %}
+          <tr>
+            <td class="fw-semibold">{{ col.header }}</td>
+            <td class="small text-muted">{% for s in col.samples %}{% if s %}<div class="text-truncate" style="max-width: 280px">{{ s }}</div>{% endif %}{% endfor %}</td>
+            <td>
+              <select name="col_{{ col.index }}" class="form-select form-select-sm" aria-label="معنى العمود {{ col.header }}">
+                {% for value, label in fields %}<option value="{{ value }}" {% if col.selected == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+              </select>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="d-flex gap-2 mt-3">
+      <button class="btn btn-primary px-4" type="submit"><i class="bi bi-cloud-arrow-up"></i> استيراد {{ row_count }} صف</button>
+      <a class="btn btn-light border" href="{% url 'import_upload' %}">رجوع</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

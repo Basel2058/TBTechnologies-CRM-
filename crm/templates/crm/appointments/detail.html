@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}موعد: {{ customer.display_name }}{% endblock %}
+{% block page_title %}موعد مع {{ customer.display_name }}{% endblock %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+          <span class="pill {{ appointment.status|appt_class }}">{{ appointment.get_status_display }}</span>
+          {% if appointment.confirmed_at %}<span class="small text-muted"><i class="bi bi-check2-all"></i> أكّد {{ appointment.confirmed_at|smart_dt }}</span>{% endif %}
+          {% if appointment.last_whatsapp_at %}<span class="small text-muted"><i class="bi bi-whatsapp"></i> آخر رسالة {{ appointment.last_whatsapp_at|smart_dt }}</span>{% endif %}
+        </div>
+        <div class="fs-3 fw-bold">{{ appointment.scheduled_at|weekday }} {{ appointment.scheduled_at|date:"d/m/Y" }} · <span class="ltr">{{ appointment.scheduled_at|time:"H:i" }}</span></div>
+        <div class="text-muted mb-3">{{ appointment.scheduled_at|smart_dt }}</div>
+        <dl class="row mb-0 gy-1">
+          <dt class="col-sm-4 text-muted fw-normal">النوع</dt><dd class="col-sm-8 mb-0">{{ appointment.get_meeting_type_display }}</dd>
+          {% if appointment.location %}<dt class="col-sm-4 text-muted fw-normal">المكان / الرابط</dt><dd class="col-sm-8 mb-0">{{ appointment.location|urlize }}</dd>{% endif %}
+          {% if appointment.product %}<dt class="col-sm-4 text-muted fw-normal">التطبيق</dt><dd class="col-sm-8 mb-0">{{ appointment.product.name }}</dd>{% endif %}
+          <dt class="col-sm-4 text-muted fw-normal">يقدّم العرض</dt><dd class="col-sm-8 mb-0">{{ appointment.presenter.display_name|default:"—" }}</dd>
+          {% if appointment.attendees %}<dt class="col-sm-4 text-muted fw-normal">يحضر من طرفه</dt><dd class="col-sm-8 mb-0">{{ appointment.attendees }}</dd>{% endif %}
+          <dt class="col-sm-4 text-muted fw-normal">حُجز</dt><dd class="col-sm-8 mb-0">{{ appointment.created_at|smart_dt }}{% if appointment.booked_by %} · {{ appointment.booked_by.short_name }}{% endif %}</dd>
+          {% if appointment.notes %}<dt class="col-sm-4 text-muted fw-normal">ملاحظات</dt><dd class="col-sm-8 mb-0 pre-line">{{ appointment.notes }}</dd>{% endif %}
+          {% if appointment.outcome_notes %}<dt class="col-sm-4 text-muted fw-normal">ماذا حصل</dt><dd class="col-sm-8 mb-0 pre-line">{{ appointment.outcome_notes }}</dd>{% endif %}
+        </dl>
+      </div>
+      {% if appointment.is_open %}
+      <div class="card-footer bg-transparent d-flex flex-wrap gap-2">
+        {% if appointment.status == "booked" %}
+          <form method="post" action="{% url 'appointment_confirm' appointment.pk %}">{% csrf_token %}<button class="btn btn-outline-primary"><i class="bi bi-check2-all"></i> العميل أكّد</button></form>
+        {% endif %}
+        <a class="btn btn-outline-success" href="{% url 'appointment_attended' appointment.pk %}"><i class="bi bi-check2"></i> حضر</a>
+        <form method="post" action="{% url 'appointment_no_show' appointment.pk %}" data-confirm="تسجيل أن العميل لم يحضر؟">{% csrf_token %}<button class="btn btn-outline-danger"><i class="bi bi-x-lg"></i> لم يحضر</button></form>
+        <a class="btn btn-light border" href="{% url 'appointment_reschedule' appointment.pk %}"><i class="bi bi-arrow-repeat"></i> تأجيل</a>
+        <a class="btn btn-light border" href="{% url 'appointment_edit' appointment.pk %}"><i class="bi bi-pencil"></i> تعديل</a>
+        <form method="post" action="{% url 'appointment_cancel' appointment.pk %}" data-confirm="إلغاء هذا الموعد؟" class="ms-auto">{% csrf_token %}<button class="btn btn-link text-danger">إلغاء الموعد</button></form>
+      </div>
+      {% elif appointment.status == "no_show" %}
+      <div class="card-footer bg-transparent">
+        <div class="hint mb-2"><i class="bi bi-lightbulb"></i> اتصل به خلال 5-10 دقائق بلطف ودون عتاب: «أكيد انشغلت، بنقدر نعملها هلأ 10 دقايق عالتلفون؟»</div>
+        <div class="d-flex flex-wrap gap-2">
+          <a class="btn btn-primary" href="{% url 'call' customer.pk %}"><i class="bi bi-telephone"></i> سجّل مكالمة</a>
+          {% if not next_versions %}<a class="btn btn-light border" href="{% url 'appointment_reschedule' appointment.pk %}"><i class="bi bi-arrow-repeat"></i> حدّد موعداً جديداً</a>{% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if history or next_versions %}
+    <div class="card">
+      <div class="card-header"><i class="bi bi-arrow-repeat text-primary"></i> تاريخ هذا الموعد</div>
+      <ul class="list-group list-group-flush">
+        {% for n in next_versions %}<li class="list-group-item">الموعد الجديد: <a href="{% url 'appointment_detail' n.pk %}">{{ n.scheduled_at|smart_dt }}</a> <span class="pill {{ n.status|appt_class }}">{{ n.get_status_display }}</span></li>{% endfor %}
+        {% for h in history %}<li class="list-group-item">كان: <a href="{% url 'appointment_detail' h.pk %}">{{ h.scheduled_at|smart_dt }}</a> <span class="pill {{ h.status|appt_class }}">{{ h.get_status_display }}</span></li>{% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-person text-primary"></i> العميل</div>
+      <div class="card-body">
+        <a class="fs-5 fw-bold text-body" href="{{ customer.get_absolute_url }}">{{ customer.display_name }}</a>
+        {% if customer.contact_name and customer.business_name %}<div class="text-muted">{{ customer.contact_name }}</div>{% endif %}
+        <div class="my-2">{% include "crm/_phone.html" with number=customer.phone %}</div>
+        {% if customer.address %}<div class="small text-muted"><i class="bi bi-geo-alt"></i> {{ customer.city }} {{ customer.address }}</div>{% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><i class="bi bi-whatsapp text-success"></i> رسائل واتساب</div>
+      <div class="card-body d-grid gap-2">
+        {% for t in templates %}
+          <form method="post" target="_blank" action="{% url 'appointment_whatsapp' appointment.pk t.pk %}">{% csrf_token %}
+            <button class="btn btn-light border w-100 text-start d-flex align-items-center gap-2"><i class="bi bi-whatsapp text-success"></i> {{ t.name }}</button>
+          </form>
+        {% empty %}
+          <div class="text-muted small">لا توجد رسائل جاهزة. {% if user.is_manager %}<a href="{% url 'settings_templates' %}">أضف رسائل</a>{% endif %}</div>
+        {% endfor %}
+        <div class="form-text">تفتح واتساب والرسالة جاهزة باسم العميل وموعده — اضغط «إرسال» هناك.</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

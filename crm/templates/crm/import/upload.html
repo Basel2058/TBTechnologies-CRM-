@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}استيراد عملاء{% endblock %}
+{% block page_title %}استيراد عملاء من Excel{% endblock %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header"><span class="pill stage-interested">خطوة 1 من 2</span> ارفع الملف</div>
+      <form method="post" enctype="multipart/form-data" class="card-body" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+        {% field form.file %}
+        {% field form.has_header %}
+        <div class="row g-2">
+          <div class="col-md-6">{% field form.assigned_to %}</div>
+          <div class="col-md-6">{% field form.product %}</div>
+          <div class="col-md-6">{% field form.sector %}</div>
+          <div class="col-md-6">{% field form.source %}</div>
+          <div class="col-md-12">{% field form.tags %}</div>
+        </div>
+        <button class="btn btn-primary px-4" type="submit"><i class="bi bi-arrow-left"></i> التالي: تحديد الأعمدة</button>
+      </form>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-info-circle text-primary"></i> كيف يجب أن يكون الملف؟</div>
+      <div class="card-body small">
+        <ul class="mb-3 ps-3">
+          <li>كل عميل في صف، وكل معلومة في عمود.</li>
+          <li>عمود <strong>الهاتف</strong> إجباري. باقي الأعمدة اختيارية.</li>
+          <li>العناوين يمكن أن تكون بالعربية أو العبرية أو الإنجليزية — النظام يخمّن معنى كل عمود وتستطيع تصحيحه.</li>
+          <li>الأرقام بأي صيغة: <span class="ltr">050-1234567</span> أو <span class="ltr">+972501234567</span> أو بدون الصفر.</li>
+          <li>الأرقام الموجودة مسبقاً في النظام أو المكررة داخل الملف <strong>لا تُضاف مرتين</strong>.</li>
+        </ul>
+        <div class="text-muted mb-1">الأعمدة التي يمكن استيرادها:</div>
+        <div class="d-flex flex-wrap gap-1">{% for value, label in fields %}<span class="pill stage-new">{{ label }}</span>{% endfor %}</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

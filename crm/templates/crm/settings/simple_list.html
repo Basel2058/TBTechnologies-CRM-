@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{{ crud.title }}{% endblock %}
+{% block page_title %}{{ crud.title }}{% endblock %}
+{% block top_actions %}<a class="btn btn-primary btn-sm" href="{% url 'settings_'|add:crud.key|add:'_new' %}"><i class="bi bi-plus-lg"></i> إضافة {{ crud.singular }}</a>{% endblock %}
+{% block content %}
+{% if crud.help_text %}<div class="hint mb-3">{{ crud.help_text }}</div>{% endif %}
+<div class="card">
+  {% if rows %}
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead><tr>{% for h in headers %}<th>{{ h }}</th>{% endfor %}<th></th></tr></thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          {% for cell in row.cells %}
+            <td>{% if cell is True %}<i class="bi bi-check2 text-success" aria-label="نعم"></i>{% elif cell is False %}<span class="text-muted">—</span>{% elif cell is None %}<span class="text-muted">عام</span>{% else %}{{ cell }}{% endif %}</td>
+          {% endfor %}
+          <td class="text-end"><a class="btn btn-sm btn-light border" href="{% url 'settings_'|add:crud.key|add:'_edit' row.obj.pk %}">تعديل</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="empty">لا يوجد عناصر بعد.</div>
+  {% endif %}
+</div>
+{% endblock %}

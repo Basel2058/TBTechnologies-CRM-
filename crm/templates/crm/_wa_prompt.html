@@ -1,0 +1,25 @@
+<div class="wa-banner p-3 mb-3 d-flex flex-wrap align-items-center gap-2">
+  <i class="bi bi-whatsapp fs-4 text-success"></i>
+  <div class="flex-grow-1 min-w-0">
+    {% if wa_prompt.appointment %}
+      <div class="fw-semibold">حُجز موعد مع {{ wa_prompt.customer.display_name }} — {{ wa_prompt.appointment.scheduled_at|smart_dt }}</div>
+      <div class="small text-muted">أرسل له تأكيداً بالواتساب الآن، فهذا يقلل احتمال الغياب.</div>
+    {% else %}
+      <div class="fw-semibold">مبروك! {{ wa_prompt.customer.display_name }} اشترك 🎉</div>
+      <div class="small text-muted">أرسل له رسالة ترحيب بالواتساب.</div>
+    {% endif %}
+  </div>
+  {% with first=wa_prompt.templates|first %}
+    {% if first %}
+    <form method="post" target="_blank" action="{% if wa_prompt.appointment %}{% url 'appointment_whatsapp' wa_prompt.appointment.pk first.pk %}{% else %}{% url 'customer_whatsapp' wa_prompt.customer.pk first.pk %}{% endif %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-whatsapp"><i class="bi bi-send"></i> {{ first.name }}</button>
+    </form>
+    {% endif %}
+  {% endwith %}
+  {% if wa_prompt.appointment %}
+    {% include "crm/_wa_menu.html" with templates=wa_prompt.templates appointment=wa_prompt.appointment label="رسائل أخرى" size="btn-sm" %}
+  {% else %}
+    {% include "crm/_wa_menu.html" with templates=wa_prompt.templates customer=wa_prompt.customer label="رسائل أخرى" size="btn-sm" %}
+  {% endif %}
+</div>

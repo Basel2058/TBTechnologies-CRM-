@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}العملاء{% endblock %}
+{% block page_title %}العملاء{% endblock %}
+{% block top_actions %}
+  {% if user.is_manager %}
+    <a class="btn btn-light border btn-sm d-none d-md-inline-block" href="{% url 'customer_export' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"><i class="bi bi-file-earmark-excel"></i> تصدير Excel</a>
+    <a class="btn btn-light border btn-sm d-none d-md-inline-block" href="{% url 'import_upload' %}"><i class="bi bi-upload"></i> استيراد</a>
+  {% endif %}
+  <a class="btn btn-primary btn-sm" href="{% url 'customer_new' %}"><i class="bi bi-plus-lg"></i> عميل جديد</a>
+{% endblock %}
+{% block content %}
+<form method="get" class="card mb-3">
+  <div class="card-body pb-2">
+    <div class="row g-2 align-items-end">
+      <div class="col-12 col-md-4">
+        <label class="form-label small" for="{{ form.q.id_for_label }}">بحث</label>
+        <div class="input-group">
+          <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+          {{ form.q }}
+        </div>
+      </div>
+      <div class="col-6 col-md-2"><label class="form-label small" for="{{ form.stage.id_for_label }}">المرحلة</label>{{ form.stage }}</div>
+      <div class="col-6 col-md-2"><label class="form-label small" for="{{ form.product.id_for_label }}">التطبيق</label>{{ form.product }}</div>
+      <div class="col-6 col-md-2"><label class="form-label small" for="{{ form.followup.id_for_label }}">الاتصال القادم</label>{{ form.followup }}</div>
+      <div class="col-6 col-md-2 d-flex gap-2">
+        <button class="btn btn-primary flex-grow-1" type="submit">بحث</button>
+        <button class="btn btn-light border" type="button" data-bs-toggle="collapse" data-bs-target="#more-filters" aria-expanded="false" title="فلاتر أكثر"><i class="bi bi-sliders"></i></button>
+      </div>
+    </div>
+    <div class="collapse {% if form.sector.value or form.city.value or form.source.value or form.subscribed.value or form.agent.value or form.order.value %}show{% endif %}" id="more-filters">
+      <div class="row g-2 mt-1">
+        <div class="col-6 col-md-2"><label class="form-label small" for="{{ form.sector.id_for_label }}">نوع المصلحة</label>{{ form.sector }}</div>
+        <div class="col-6 col-md-2"><label class="form-label small" for="{{ form.city.id_for_label }}">المدينة</label>{{ form.city }}</div>
+        <div class="col-6 col-md-2"><label class="form-label small" for="{{ form.source.id_for_label }}">المصدر</label>{{ form.source }}</div>
+        <div class="col-6 col-md-2"><label class="form-label small" for="{{ form.subscribed.id_for_label }}">الاشتراك</label>{{ form.subscribed }}</div>
+        {% if form.agent %}<div class="col-6 col-md-2"><label class="form-label small" for="{{ form.agent.id_for_label }}">الموظف</label>{{ form.agent }}</div>{% endif %}
+        <div class="col-6 col-md-2"><label class="form-label small" for="{{ form.order.id_for_label }}">الترتيب</label>{{ form.order }}</div>
+      </div>
+    </div>
+  </div>
+</form>
+
+<div class="d-flex align-items-center gap-2 mb-2">
+  <div class="small text-muted"><strong class="text-body">{{ page.paginator.count }}</strong> عميل</div>
+  {% if filtered %}<a class="small" href="{% url 'customer_list' %}">مسح الفلاتر</a>{% endif %}
+</div>
+
+<div class="card">
+  {% if page.object_list %}
+  <form method="post" action="{% url 'customer_bulk' %}" id="bulk-form">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <div class="table-responsive">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            {% if user.is_manager %}<th style="width: 36px"><input class="form-check-input" type="checkbox" data-select-all aria-label="تحديد الكل"></th>{% endif %}
+            <th>العميل</th><th>الهاتف</th><th>المدينة</th><th>التطبيق</th><th>المرحلة</th><th>آخر اتصال</th><th>الاتصال القادم</th>
+            {% if user.is_manager %}<th>الموظف</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in page.object_list %}
+          <tr>
+            {% if user.is_manager %}<td><input class="form-check-input" type="checkbox" name="ids" value="{{ c.pk }}" data-select-row aria-label="تحديد {{ c.display_name }}"></td>{% endif %}
+            <td>
+              <a class="fw-semibold text-body" href="{{ c.get_absolute_url }}">{{ c.display_name }}</a>
+              <div class="small text-muted">{% if c.contact_name and c.business_name %}{{ c.contact_name }}{% endif %}{% if c.sector %}{% if c.contact_name and c.business_name %} · {% endif %}{{ c.sector.name }}{% endif %}</div>
+            </td>
+            <td><span class="phone-number">{{ c.phone|phone }}</span></td>
+            <td>{{ c.city|default:"—" }}</td>
+            <td>{{ c.product.name|default:"—" }}</td>
+            <td>
+              <span class="pill {{ c.stage|stage_class }}">{{ c.get_stage_display }}</span>
+              {% if c.pk in subscribed_ids and c.stage != "won" %}<span class="pill stage-won">مشترك</span>{% endif %}
+              {% if c.stage == "lost" and c.lost_reason %}<div class="small text-muted mt-1">{{ c.lost_reason.text }}</div>{% endif %}
+            </td>
+            <td class="small text-nowrap">{% if c.last_call_at %}{{ c.last_call_at|smart_dt:"date" }}<div class="text-muted">{{ c.last_outcome_label }}</div>{% else %}<span class="text-muted">لم نتصل بعد</span>{% endif %}</td>
+            <td class="small text-nowrap {% if c.next_call_at|is_overdue %}overdue{% endif %}">{{ c.next_call_at|smart_dt|default:"—" }}</td>
+            {% if user.is_manager %}<td class="small">{{ c.assigned_to.display_name|default:"—" }}</td>{% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if user.is_manager %}
+    <div class="bulk-bar m-2" data-bulk-bar>
+      <span>تم تحديد <strong data-bulk-count>0</strong></span>
+      <select name="action" class="form-select form-select-sm">
+        <option value="assign">إسناد إلى موظف</option>
+        <option value="product">تحديد التطبيق المستهدف</option>
+        <option value="queue">إضافة لقائمة الاتصال الآن</option>
+      </select>
+      <select name="agent" class="form-select form-select-sm" data-for-action="assign">
+        <option value="">— بدون إسناد —</option>
+        {% for u in users %}<option value="{{ u.pk }}">{{ u.display_name }}</option>{% endfor %}
+      </select>
+      <select name="product" class="form-select form-select-sm" data-for-action="product" hidden>
+        <option value="">— بدون —</option>
+        {% for p in products %}<option value="{{ p.pk }}">{{ p.name }}</option>{% endfor %}
+      </select>
+      <button type="submit" class="btn btn-sm btn-primary">تنفيذ</button>
+    </div>
+    {% endif %}
+  </form>
+  {% else %}
+    <div class="empty"><i class="bi bi-people"></i>
+      {% if filtered %}لا يوجد عملاء بهذه الفلاتر.{% else %}لا يوجد عملاء بعد.{% endif %}
+      <div class="mt-2 d-flex gap-2 justify-content-center">
+        <a class="btn btn-sm btn-primary" href="{% url 'customer_new' %}">أضف عميلاً</a>
+        {% if user.is_manager %}<a class="btn btn-sm btn-light border" href="{% url 'import_upload' %}">استورد من Excel</a>{% endif %}
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% include "crm/_pagination.html" %}
+{% endblock %}

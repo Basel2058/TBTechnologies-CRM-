@@ -1,0 +1,18 @@
+{% comment %}قائمة رسائل واتساب الجاهزة. المتغيرات: templates، customer، appointment (اختياري)، size{% endcomment %}
+{% if templates %}
+<div class="dropdown d-inline-block">
+  <button class="btn btn-whatsapp {{ size|default:'' }} dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+    <i class="bi bi-whatsapp"></i> {{ label|default:"واتساب" }}
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    {% for template in templates %}
+      <li>
+        <form method="post" target="_blank" action="{% if appointment %}{% url 'appointment_whatsapp' appointment.pk template.pk %}{% else %}{% url 'customer_whatsapp' customer.pk template.pk %}{% endif %}">
+          {% csrf_token %}
+          <button type="submit" class="dropdown-item">{{ template.name }}</button>
+        </form>
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}

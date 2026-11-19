@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}فرص بيع{% endblock %}
+{% block page_title %}فرص بيع جاهزة{% endblock %}
+{% block content %}
+<p class="text-muted">أسهل بيع هو لزبون يعرفك. هنا قوائم جاهزة يتصل بها الموظف بضغطة.</p>
+
+<div class="card mb-3">
+  <div class="card-header"><i class="bi bi-plus-square text-primary"></i> مشتركون يمكن أن يشتروا تطبيقاً آخر <span class="pill stage-won">{{ upsell|length }}</span></div>
+  {% if upsell %}
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead><tr><th>العميل</th><th>مشترك في</th><th>اعرض عليه</th>{% if user.is_manager %}<th>الموظف</th>{% endif %}</tr></thead>
+      <tbody>
+        {% for row in upsell %}
+        <tr>
+          <td><a class="fw-semibold text-body" href="{{ row.customer.get_absolute_url }}">{{ row.customer.display_name }}</a>
+            {% if row.customer.next_call_at %}<div class="small text-muted">اتصال قادم: {{ row.customer.next_call_at|smart_dt }}</div>{% endif %}</td>
+          <td>{% for p in row.owned %}<span class="pill stage-won">{{ p.name }}</span> {% endfor %}</td>
+          <td>
+            <div class="d-flex flex-wrap gap-1">
+            {% for p in row.missing %}
+              <form method="post" action="{% url 'customer_followup' row.customer.pk %}">
+                {% csrf_token %}<input type="hidden" name="now" value="1"><input type="hidden" name="product" value="{{ p.pk }}">
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button class="btn btn-sm btn-soft" title="أضفه لقائمة الاتصال الآن لعرض {{ p.name }}"><i class="bi bi-telephone-plus"></i> {{ p.name }}</button>
+              </form>
+            {% endfor %}
+            </div>
+          </td>
+          {% if user.is_manager %}<td class="small">{{ row.customer.assigned_to.display_name|default:"—" }}</td>{% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card-footer bg-transparent small text-muted">الضغط على اسم التطبيق يضع العميل في أول قائمة الاتصال، ويجعل هذا التطبيق هو المستهدف.</div>
+  {% else %}
+    <div class="empty py-3">لا يوجد حالياً. عندما يشترك العملاء في تطبيق، ستظهر هنا فرص بيع التطبيقات الأخرى.</div>
+  {% endif %}
+</div>
+
+<div class="card mb-3">
+  <div class="card-header"><i class="bi bi-hourglass-split text-warning"></i> عقود منافسين تنتهي قريباً <span class="pill stage-offer">{{ contracts|length }}</span></div>
+  {% if contracts %}
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead><tr><th>العميل</th><th>يستخدم</th><th>ينتهي العقد</th><th>الاتصال القادم</th><th></th></tr></thead>
+      <tbody>
+        {% for c in contracts %}
+        <tr>
+          <td><a class="fw-semibold text-body" href="{{ c.get_absolute_url }}">{{ c.display_name }}</a></td>
+          <td>{{ c.competitor_name|default:"برنامج منافس" }}</td>
+          <td class="{% if c.contract_end_date <= today %}overdue{% endif %}">{{ c.contract_end_date|smart_dt:"date" }}</td>
+          <td class="small">{{ c.next_call_at|smart_dt|default:"—" }}</td>
+          <td class="text-end"><a class="btn btn-sm btn-light border" href="{% url 'call' c.pk %}"><i class="bi bi-telephone"></i> اتصل</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="empty py-3">عندما يقول عميل «عندي برنامج آخر» سجّل متى ينتهي عقده — وسيظهر هنا قبل انتهائه.</div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-header"><i class="bi bi-arrow-counterclockwise text-primary"></i> رفضوا قبل أكثر من 3 أشهر — جرّب مرة أخرى <span class="pill stage-new">{{ reapproach|length }}</span></div>
+  {% if reapproach %}
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead><tr><th>العميل</th><th>سبب الرفض</th><th>منذ</th><th></th></tr></thead>
+      <tbody>
+        {% for c in reapproach %}
+        <tr>
+          <td><a class="fw-semibold text-body" href="{{ c.get_absolute_url }}">{{ c.display_name }}</a></td>
+          <td>{{ c.lost_reason.text|default:"—" }}</td>
+          <td class="small">{{ c.stage_changed_at|days_ago }}</td>
+          <td class="text-end">
+            <form method="post" action="{% url 'customer_followup' c.pk %}">{% csrf_token %}<input type="hidden" name="now" value="1"><input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button class="btn btn-sm btn-soft"><i class="bi bi-telephone-plus"></i> أضف لقائمة الاتصال</button></form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="empty py-3">لا يوجد حالياً.</div>
+  {% endif %}
+</div>
+{% endblock %}

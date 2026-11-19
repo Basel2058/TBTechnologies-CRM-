@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}النسخ الاحتياطي{% endblock %}
+{% block page_title %}النسخ الاحتياطي{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 760px">
+  <div class="card-body">
+    <p>كل بيانات النظام ({{ customers }} عميل مع مكالماتهم ومواعيدهم واشتراكاتهم) محفوظة في ملف واحد. نزّل نسخة منه <strong>مرة في الأسبوع على الأقل</strong> واحفظها في مكان آمن (Google Drive أو ذاكرة خارجية).</p>
+    <a class="btn btn-primary" href="{% url 'backup_download' %}"><i class="bi bi-download"></i> تنزيل نسخة احتياطية الآن</a>
+    <hr>
+    <div class="small text-muted">
+      <div class="fw-semibold text-body mb-1">لاسترجاع نسخة:</div>
+      أوقف النظام، ثم ضع الملف الذي نزّلته مكان هذا الملف وسمّه بنفس الاسم، ثم شغّل النظام من جديد:
+      <div class="mt-1"><code class="ltr">{{ db_path }}</code></div>
+      <div class="mt-2">لملف Excel بقائمة العملاء فقط، استخدم <a href="{% url 'customer_export' %}">تصدير العملاء</a>.</div>
+    </div>
+  </div>
+</div>
+{% endblock %}

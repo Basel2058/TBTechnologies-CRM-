@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}{{ customer.display_name }}{% endblock %}
+{% block page_title %}{{ customer.display_name }}{% endblock %}
+{% block top_actions %}
+  <a class="btn btn-primary btn-sm" href="{% url 'call' customer.pk %}"><i class="bi bi-telephone"></i> <span class="d-none d-sm-inline">سجّل مكالمة</span></a>
+  {% include "crm/_wa_menu.html" with templates=customer_templates customer=customer size="btn-sm" %}
+  <div class="dropdown">
+    <button class="btn btn-light border btn-sm" type="button" data-bs-toggle="dropdown" aria-label="المزيد"><i class="bi bi-three-dots"></i></button>
+    <ul class="dropdown-menu dropdown-menu-end">
+      <li><a class="dropdown-item" href="{% url 'customer_edit' customer.pk %}"><i class="bi bi-pencil"></i> تعديل البيانات</a></li>
+      <li><a class="dropdown-item" href="{% url 'appointment_new' customer.pk %}"><i class="bi bi-calendar-plus"></i> حجز موعد</a></li>
+      <li><a class="dropdown-item" href="{% url 'subscription_new' customer.pk %}"><i class="bi bi-credit-card"></i> إضافة اشتراك</a></li>
+      {% if user.is_manager %}<li><hr class="dropdown-divider"></li><li><a class="dropdown-item text-danger" href="{% url 'customer_delete' customer.pk %}"><i class="bi bi-trash"></i> حذف العميل</a></li>{% endif %}
+    </ul>
+  </div>
+{% endblock %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-4 d-flex flex-column gap-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex flex-wrap gap-2 mb-2">
+          <span class="pill {{ customer.stage|stage_class }}">{{ customer.get_stage_display }}</span>
+          {% if active_subscriptions and customer.stage != "won" %}<span class="pill stage-won">مشترك</span>{% endif %}
+          {% for tag in customer.tag_list %}<span class="pill tag-pill">{{ tag }}</span>{% endfor %}
+        </div>
+        <div class="fs-5 fw-bold">{{ customer.display_name }}</div>
+        {% if customer.contact_name and customer.business_name %}<div class="text-muted mb-2">{{ customer.contact_name }}</div>{% endif %}
+        <div class="my-2">{% include "crm/_phone.html" with number=customer.phone %}</div>
+        {% if customer.phone_alt %}<div class="mb-2"><span class="small-label">هاتف إضافي</span>{% include "crm/_phone.html" with number=customer.phone_alt %}</div>{% endif %}
+        <dl class="row small mb-0 mt-3 gy-1">
+          {% if customer.email %}<dt class="col-5 text-muted fw-normal">البريد</dt><dd class="col-7 mb-0"><a class="ltr" href="mailto:{{ customer.email }}">{{ customer.email }}</a></dd>{% endif %}
+          {% if customer.city or customer.address %}<dt class="col-5 text-muted fw-normal">العنوان</dt><dd class="col-7 mb-0">{{ customer.city }}{% if customer.city and customer.address %}، {% endif %}{{ customer.address }}</dd>{% endif %}
+          <dt class="col-5 text-muted fw-normal">نوع المصلحة</dt><dd class="col-7 mb-0">{{ customer.sector.name|default:"—" }}</dd>
+          {% if customer.employees_count or customer.branches_count %}<dt class="col-5 text-muted fw-normal">الحجم</dt><dd class="col-7 mb-0">{% if customer.employees_count %}{{ customer.employees_count }} موظف{% endif %}{% if customer.employees_count and customer.branches_count %} · {% endif %}{% if customer.branches_count %}{{ customer.branches_count }} فرع{% endif %}</dd>{% endif %}
+          <dt class="col-5 text-muted fw-normal">التطبيق المستهدف</dt><dd class="col-7 mb-0">{% if customer.product %}<a href="{{ customer.product.get_absolute_url }}">{{ customer.product.name }}</a>{% else %}—{% endif %}</dd>
+          {% if customer.current_solution %}<dt class="col-5 text-muted fw-normal">يستخدم حالياً</dt><dd class="col-7 mb-0">{{ customer.get_current_solution_display }}{% if customer.competitor_name %} ({{ customer.competitor_name }}){% endif %}</dd>{% endif %}
+          {% if customer.contract_end_date %}<dt class="col-5 text-muted fw-normal">ينتهي عقده</dt><dd class="col-7 mb-0">{{ customer.contract_end_date|date:"d/m/Y" }}</dd>{% endif %}
+          {% if customer.decision_maker_name or customer.decision_maker_phone %}<dt class="col-5 text-muted fw-normal">صاحب القرار</dt><dd class="col-7 mb-0">{{ customer.decision_maker_name }} {% if customer.decision_maker_phone %}<span class="phone-number">{{ customer.decision_maker_phone|phone }}</span>{% endif %}</dd>{% endif %}
+          {% if customer.quiet_hours %}<dt class="col-5 text-muted fw-normal">الوقت الهادئ</dt><dd class="col-7 mb-0">{{ customer.quiet_hours }}</dd>{% endif %}
+          <dt class="col-5 text-muted fw-normal">لغة التواصل</dt><dd class="col-7 mb-0">{{ customer.get_language_display }}</dd>
+          <dt class="col-5 text-muted fw-normal">المصدر</dt><dd class="col-7 mb-0">{{ customer.get_source_display }}</dd>
+          <dt class="col-5 text-muted fw-normal">الموظف</dt><dd class="col-7 mb-0">{{ customer.assigned_to.display_name|default:"غير مسند" }}</dd>
+          <dt class="col-5 text-muted fw-normal">المكالمات</dt><dd class="col-7 mb-0">{{ calls_count }}{% if customer.last_call_at %} · آخرها {{ customer.last_call_at|smart_dt:"date" }}{% endif %}</dd>
+          <dt class="col-5 text-muted fw-normal">أُضيف</dt><dd class="col-7 mb-0">{{ customer.created_at|date:"d/m/Y" }}</dd>
+        </dl>
+        {% if customer.notes %}<div class="hint mt-3 pre-line">{{ customer.notes }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><i class="bi bi-alarm text-primary"></i> الاتصال القادم</div>
+      <div class="card-body">
+        {% if customer.next_call_at %}
+          <div class="fs-5 fw-semibold {% if customer.is_overdue %}overdue{% endif %}">{{ customer.next_call_at|smart_dt }}{% if customer.is_overdue %} <span class="small">(متأخر)</span>{% endif %}</div>
+        {% else %}
+          <div class="text-muted">لا يوجد موعد اتصال قادم.</div>
+        {% endif %}
+        <form method="post" action="{% url 'customer_followup' customer.pk %}" class="mt-2">
+          {% csrf_token %}
+          {{ followup_form.next_call_at }}
+          <div class="quick-picks">
+            <button class="btn btn-light border" data-quick="tomorrow10" data-target="id_next_call_at">غداً 10:00</button>
+            <button class="btn btn-light border" data-quick="2d" data-target="id_next_call_at">بعد يومين</button>
+            <button class="btn btn-light border" data-quick="week" data-target="id_next_call_at">بعد أسبوع</button>
+            <button class="btn btn-light border" data-quick="month" data-target="id_next_call_at">بعد شهر</button>
+          </div>
+          <div class="d-flex gap-2 mt-2">
+            <button class="btn btn-sm btn-primary" type="submit">حفظ الموعد</button>
+          </div>
+        </form>
+        <form method="post" action="{% url 'customer_followup' customer.pk %}" class="mt-2">
+          {% csrf_token %}<input type="hidden" name="now" value="1">
+          <button class="btn btn-sm btn-soft w-100" type="submit"><i class="bi bi-lightning"></i> ضعه في قائمة الاتصال الآن</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><i class="bi bi-signpost-split text-primary"></i> المرحلة</div>
+      <div class="card-body">
+        <form method="post" action="{% url 'customer_stage' customer.pk %}">
+          {% csrf_token %}
+          <div class="mb-2">{{ stage_form.stage }}</div>
+          <div class="mb-2"><label class="form-label small" for="{{ stage_form.lost_reason.id_for_label }}">سبب الرفض (إذا اخترت «غير مهتم»)</label>{{ stage_form.lost_reason }}</div>
+          <button class="btn btn-sm btn-primary" type="submit">تغيير المرحلة</button>
+        </form>
+        {% if customer.stage == "lost" and customer.lost_reason %}<div class="small text-muted mt-2">سبب الرفض الحالي: {{ customer.lost_reason.text }}</div>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8 d-flex flex-column gap-3">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-calendar-event text-primary"></i> المواعيد
+        <div class="header-actions"><a class="btn btn-sm btn-soft" href="{% url 'appointment_new' customer.pk %}"><i class="bi bi-plus-lg"></i> حجز موعد</a></div>
+      </div>
+      {% if appointments %}
+      <ul class="list-group list-group-flush">
+        {% for a in appointments %}
+        <li class="list-group-item d-flex flex-wrap align-items-center gap-2">
+          <div class="flex-grow-1 min-w-0">
+            <a class="fw-semibold text-body" href="{% url 'appointment_detail' a.pk %}">{{ a.scheduled_at|smart_dt }}</a>
+            <span class="small text-muted">· {{ a.get_meeting_type_display }}{% if a.product %} · {{ a.product.name }}{% endif %}{% if a.presenter %} · يقدّمه {{ a.presenter.short_name }}{% endif %}</span>
+            {% if a.outcome_notes %}<div class="small pre-line mt-1">{{ a.outcome_notes }}</div>{% endif %}
+          </div>
+          <span class="pill {{ a.status|appt_class }}">{{ a.get_status_display }}</span>
+          {% if a.is_open %}{% include "crm/_wa_menu.html" with templates=appointment_templates appointment=a size="btn-sm" label="" %}{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+        <div class="empty py-3">لا يوجد مواعيد.</div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-header"><i class="bi bi-credit-card text-primary"></i> الاشتراكات
+        <div class="header-actions"><a class="btn btn-sm btn-soft" href="{% url 'subscription_new' customer.pk %}"><i class="bi bi-plus-lg"></i> إضافة اشتراك</a></div>
+      </div>
+      {% if subscriptions %}
+      <ul class="list-group list-group-flush">
+        {% for s in subscriptions %}
+        <li class="list-group-item d-flex flex-wrap align-items-center gap-2">
+          <div class="flex-grow-1 min-w-0">
+            <span class="fw-semibold">{{ s.product.name }}</span>{% if s.plan %} <span class="text-muted small">· {{ s.plan.name }}</span>{% endif %}
+            <div class="small text-muted">{{ s.monthly_price|money }} شهرياً · منذ {{ s.start_date|date:"d/m/Y" }}
+              {% if s.status == "cancelled" %} · أُلغي {{ s.cancelled_at|date:"d/m/Y" }}{% if s.cancel_reason %} ({{ s.cancel_reason.text }}){% endif %}{% endif %}</div>
+          </div>
+          <span class="pill sub-{{ s.status }}">{{ s.get_status_display }}</span>
+          {% if user.is_manager %}
+            <a class="btn btn-sm btn-light border" href="{% url 'subscription_edit' s.pk %}">تعديل</a>
+            {% if s.status != "cancelled" %}<a class="btn btn-sm btn-outline-danger" href="{% url 'subscription_cancel' s.pk %}">إلغاء</a>{% endif %}
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+        <div class="empty py-3">لا يوجد اشتراكات.</div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-header"><i class="bi bi-clock-history text-primary"></i> السجل الكامل</div>
+      <div class="card-body">
+        <form method="post" action="{% url 'customer_note' customer.pk %}" class="mb-4">
+          {% csrf_token %}
+          {{ note_form.text }}
+          <button class="btn btn-sm btn-primary mt-2" type="submit"><i class="bi bi-sticky"></i> إضافة ملاحظة</button>
+        </form>
+        {% if activities %}
+        <ul class="timeline">
+          {% for item in activities %}
+          <li>
+            <span class="tl-icon tl-{{ item.kind }}">
+              {% if item.kind == "call" %}<i class="bi bi-telephone"></i>{% elif item.kind == "note" %}<i class="bi bi-sticky"></i>{% elif item.kind == "stage" %}<i class="bi bi-signpost-split"></i>{% elif item.kind == "appointment" %}<i class="bi bi-calendar-event"></i>{% elif item.kind == "whatsapp" %}<i class="bi bi-whatsapp"></i>{% elif item.kind == "subscription" %}<i class="bi bi-credit-card"></i>{% else %}<i class="bi bi-info-circle"></i>{% endif %}
+            </span>
+            <div class="tl-meta">{{ item.created_at|smart_dt }}{% if item.user %} · {{ item.user.short_name }}{% endif %}</div>
+            {% if item.kind == "call" and item.call %}
+              <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="pill {{ item.call.outcome|outcome_class }}">{{ item.call.get_outcome_display }}</span>
+                {% if item.call.product %}<span class="small text-muted">{{ item.call.product.name }}</span>{% endif %}
+              </div>
+              {% if item.call.rejection_reason %}<div class="tl-text mt-1">السبب: {{ item.call.rejection_reason.text }}{% if item.call.rejection_detail %} — {{ item.call.rejection_detail }}{% endif %}</div>{% endif %}
+              {% if item.call.notes %}<div class="tl-text mt-1">{{ item.call.notes }}</div>{% endif %}
+            {% else %}
+              <div class="tl-text">{{ item.text }}</div>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+          <div class="empty py-2">لا يوجد نشاط بعد.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

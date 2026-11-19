@@ -1,0 +1,12 @@
+{% comment %}نسبة الغياب لكل مجموعة. rows: [{label, rate, no_show, total}]{% endcomment %}
+{% if rows %}
+  {% for row in rows %}
+  <div class="meter-row">
+    <span class="bar-label">{{ row.label }}</span>
+    <div class="meter" role="img" aria-label="{{ row.label }}: غياب {{ row.rate }}%"><span style="width: {{ row.rate }}%"></span></div>
+    <span class="meter-value">{{ row.rate }}% <small>({{ row.no_show }} من {{ row.total }})</small></span>
+  </div>
+  {% endfor %}
+{% else %}
+<div class="empty py-3">لا بيانات.</div>
+{% endif %}

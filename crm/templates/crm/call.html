@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% block title %}مكالمة: {{ customer.display_name }}{% endblock %}
+{% block page_title %}{% if queue_mode %}وضع الاتصال{% else %}مكالمة{% endif %}{% endblock %}
+{% block top_actions %}
+  {% if queue_mode %}
+    {% if queue_left is not None %}<span class="small text-muted d-none d-md-inline">متبقي في القائمة: <strong class="text-body">{{ queue_left }}</strong></span>{% endif %}
+    <a class="btn btn-light border btn-sm" href="{% url 'queue_next' %}?skip={{ customer.pk }}" title="تخطَّ هذا العميل الآن"><i class="bi bi-skip-backward"></i> تخطي</a>
+    <a class="btn btn-light border btn-sm" href="{% url 'queue' %}">إنهاء</a>
+  {% endif %}
+{% endblock %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-7">
+    <section class="call-hero mb-3">
+      <div class="d-flex flex-wrap gap-2 mb-2">
+        <span class="pill">{{ customer.get_stage_display }}</span>
+        {% if customer.product %}<span class="pill"><i class="bi bi-grid"></i> {{ customer.product.name }}</span>{% endif %}
+        {% if customer.sector %}<span class="pill">{{ customer.sector.name }}</span>{% endif %}
+        {% if customer.city %}<span class="pill"><i class="bi bi-geo-alt"></i> {{ customer.city }}</span>{% endif %}
+        {% if customer.language == "he" %}<span class="pill"><i class="bi bi-translate"></i> يتحدث العبرية</span>{% endif %}
+        {% if customer.unanswered_attempts %}<span class="pill"><i class="bi bi-arrow-repeat"></i> محاولة رقم {{ customer.unanswered_attempts|add:1 }}</span>{% endif %}
+      </div>
+      <div class="d-flex flex-wrap align-items-start gap-3">
+        <div class="flex-grow-1 min-w-0">
+          <h2 class="h3 fw-bold mb-0">{{ customer.display_name }}</h2>
+          {% if customer.contact_name and customer.business_name %}<div class="text-muted">{{ customer.contact_name }}</div>{% endif %}
+        </div>
+        <a class="btn btn-light btn-sm" href="{{ customer.get_absolute_url }}"><i class="bi bi-person-lines-fill"></i> ملف العميل</a>
+      </div>
+      <div class="mt-3">{% include "crm/_phone.html" with number=customer.phone big=True dark=True %}</div>
+      <div class="row g-2 mt-1 small">
+        {% if customer.phone_alt %}<div class="col-sm-6"><span class="small-label">هاتف إضافي</span>{% include "crm/_phone.html" with number=customer.phone_alt dark=True %}</div>{% endif %}
+        {% if customer.decision_maker_name or customer.decision_maker_phone %}
+          <div class="col-sm-6"><span class="small-label">صاحب القرار</span> <span class="fw-semibold">{{ customer.decision_maker_name }}</span>
+            {% include "crm/_phone.html" with number=customer.decision_maker_phone dark=True %}</div>
+        {% endif %}
+        {% if customer.quiet_hours %}<div class="col-sm-6"><span class="small-label">الوقت الهادئ عنده:</span> {{ customer.quiet_hours }}</div>{% endif %}
+        {% if customer.current_solution %}<div class="col-sm-6"><span class="small-label">يستخدم حالياً:</span> {{ customer.get_current_solution_display }}{% if customer.competitor_name %} ({{ customer.competitor_name }}){% endif %}{% if customer.contract_end_date %} · عقده ينتهي {{ customer.contract_end_date|date:"d/m/Y" }}{% endif %}</div>{% endif %}
+        {% if customer.lost_reason %}<div class="col-sm-6"><span class="small-label">رفض سابقاً بسبب:</span> {{ customer.lost_reason.text }}</div>{% endif %}
+      </div>
+      <div class="d-flex flex-wrap gap-2 mt-3">
+        {% include "crm/_wa_menu.html" with templates=customer_templates customer=customer size="btn-sm" %}
+      </div>
+    </section>
+
+    {% for a in open_appointments %}
+      <div class="alert alert-info py-2"><i class="bi bi-calendar-event"></i> عنده موعد {{ a.get_meeting_type_display }} {{ a.scheduled_at|smart_dt }} — <a href="{% url 'appointment_detail' a.pk %}">تفاصيل الموعد</a></div>
+    {% endfor %}
+
+    <form method="post" class="card mb-3" data-call-form data-pricing novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="mode" value="{% if queue_mode %}queue{% endif %}">
+      <div class="card-header">
+        <i class="bi bi-ui-checks-grid text-primary"></i> ماذا حصل في المكالمة؟
+        <span class="header-actions small text-muted d-none d-md-flex">اختصار: اضغط <kbd>1</kbd>–<kbd>9</kbd></span>
+      </div>
+      <div class="card-body">
+        {% if form.non_field_errors %}<div class="alert alert-danger py-2">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+        <div class="outcome-grid" role="radiogroup" aria-label="نتيجة المكالمة">
+          {% for value, icon, tone in outcomes %}
+            <div class="outcome-tile {{ tone }}">
+              <input type="radio" name="outcome" id="outcome-{{ value }}" value="{{ value }}" {% if selected_outcome == value %}checked{% endif %}>
+              <label for="outcome-{{ value }}"><span class="key">{{ forloop.counter }}</span><i class="bi {{ icon }}"></i>{{ value.label }}</label>
+            </div>
+          {% endfor %}
+        </div>
+        {% for error in form.outcome.errors %}<div class="text-danger small mt-2">اختر نتيجة المكالمة.</div>{% endfor %}
+
+        <div class="mt-3">
+          <div class="conditional" data-show-for="wrong_number">
+            <div class="hint mb-3"><i class="bi bi-info-circle"></i> سيتوقف الاتصال بهذا الرقم. إذا عرفت الرقم الصحيح، <a href="{% url 'customer_edit' customer.pk %}">عدّل بيانات العميل</a>.</div>
+          </div>
+
+          <div class="conditional" data-show-for="not_interested">
+            <div class="mb-3 {% if form.rejection_reason.errors %}has-error{% endif %}">
+              <label class="form-label" for="id_rejection_reason">لماذا رفض؟ <span class="text-danger">*</span></label>
+              <select name="rejection_reason" id="id_rejection_reason" class="form-select">
+                <option value="">— اختر السبب —</option>
+                {% for r in reasons %}
+                  <option value="{{ r.pk }}" data-detail="{{ r.requires_detail|yesno:'1,0' }}" data-contract="{{ r.asks_contract_end|yesno:'1,0' }}" {% if form.rejection_reason.value|stringformat:"s" == r.pk|stringformat:"s" %}selected{% endif %}>{{ r.text }}</option>
+                {% endfor %}
+              </select>
+              {% for error in form.rejection_reason.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+              <div class="form-text">تذكّر: «غالي» يعني غالباً «لم أقتنع». اسأله سؤالاً إضافياً قبل أن تختار.</div>
+            </div>
+            <div class="row g-2">
+              <div class="col-sm-7 conditional" id="detail-wrap">{% field form.rejection_detail %}</div>
+              <div class="col-sm-5 conditional" id="contract-wrap">
+                {% field form.contract_end_date %}
+                <div class="form-text mt-n2 mb-3">سنذكّرك بالاتصال به قبل انتهاء عقده بشهر.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="conditional" data-show-for="demo_booked">
+            <div class="hint mb-3"><i class="bi bi-lightbulb"></i> موعد قريب (اليوم أو غداً) وقصير يقلل الغياب. اسأله: «إيمتى الوقت الهادي عندك؟» و«مين كمان لازم يكون موجود؟»</div>
+            <div class="row g-2">
+              <div class="col-sm-6 {% if form.appt_at.errors %}has-error{% endif %}">
+                <label class="form-label" for="id_appt_at">موعد العرض <span class="text-danger">*</span></label>
+                {{ form.appt_at }}
+                <div class="quick-picks">
+                  <button class="btn btn-light border" data-quick="2h" data-target="id_appt_at">بعد ساعتين</button>
+                  <button class="btn btn-light border" data-quick="tomorrow10" data-target="id_appt_at">غداً 10:00</button>
+                  <button class="btn btn-light border" data-quick="tomorrow15" data-target="id_appt_at">غداً 15:00</button>
+                  <button class="btn btn-light border" data-quick="2d" data-target="id_appt_at">بعد يومين</button>
+                </div>
+                {% for error in form.appt_at.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+              </div>
+              <div class="col-sm-6">{% field form.appt_type %}</div>
+              <div class="col-sm-6">{% field form.appt_location %}</div>
+              <div class="col-sm-6">{% field form.appt_attendees %}</div>
+              <div class="col-sm-6">{% field form.appt_presenter %}</div>
+            </div>
+          </div>
+
+          <div class="conditional" data-show-for="sold">
+            <div class="hint mb-3"><i class="bi bi-trophy"></i> ممتاز! سجّل تفاصيل الاشتراك حتى يظهر في الإيرادات.</div>
+            <div class="row g-2">
+              <div class="col-sm-5 mb-3 {% if form.sub_plan.errors %}has-error{% endif %}">
+                <label class="form-label" for="id_sub_plan">الباقة</label>
+                <select name="sub_plan" id="id_sub_plan" class="form-select" data-price-plan>
+                  <option value="">— بدون باقة —</option>
+                  {% for p in plans %}
+                    <option value="{{ p.pk }}" data-product="{{ p.product_id }}" data-price="{{ p.monthly_price|floatformat:'-2u' }}" {% if form.sub_plan.value|stringformat:"s" == p.pk|stringformat:"s" %}selected{% endif %}>{{ p.product.name }} — {{ p.name }} ({{ p.monthly_price|money }})</option>
+                  {% endfor %}
+                </select>
+                {% for error in form.sub_plan.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+              </div>
+              <div class="col-sm-4">{% field form.sub_price %}</div>
+              <div class="col-sm-3">{% field form.sub_start %}</div>
+            </div>
+          </div>
+
+          <div class="conditional" data-show-for="no_answer busy callback info_requested interested not_interested sold">
+            <div class="mb-3 {% if form.follow_up_at.errors %}has-error{% endif %}">
+              <label class="form-label" for="id_follow_up_at">متى نتصل به مرة أخرى؟ <span class="text-danger" data-required-for="callback info_requested interested" hidden>*</span></label>
+              {{ form.follow_up_at }}
+              <div class="quick-picks">
+                <button class="btn btn-light border" data-quick="1h" data-target="id_follow_up_at">بعد ساعة</button>
+                <button class="btn btn-light border" data-quick="today17" data-target="id_follow_up_at">اليوم 17:00</button>
+                <button class="btn btn-light border" data-quick="tomorrow10" data-target="id_follow_up_at">غداً 10:00</button>
+                <button class="btn btn-light border" data-quick="tomorrow15" data-target="id_follow_up_at">غداً 15:00</button>
+                <button class="btn btn-light border" data-quick="2d" data-target="id_follow_up_at">بعد يومين</button>
+                <button class="btn btn-light border" data-quick="week" data-target="id_follow_up_at">بعد أسبوع</button>
+                <button class="btn btn-light border" data-quick="month" data-target="id_follow_up_at">بعد شهر</button>
+                <button class="btn btn-light border" data-quick="3months" data-target="id_follow_up_at">بعد 3 أشهر</button>
+              </div>
+              {% for error in form.follow_up_at.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+              <div class="form-text conditional" data-show-for="no_answer busy">اتركه فارغاً وسيعيده النظام للقائمة تلقائياً في وقت مختلف من اليوم (بعد {{ max_attempts }} محاولات بدون رد تتوقف المحاولات).</div>
+              <div class="form-text conditional" data-show-for="not_interested sold">اختياري — مثلاً: نجرّب معه مرة أخرى بعد 3 أشهر.</div>
+            </div>
+          </div>
+
+          <div class="row g-2">
+            <div class="col-md-5 mb-3 {% if form.product.errors %}has-error{% endif %}">
+              <label class="form-label" for="id_product">{{ form.product.label }}</label>
+              <select name="product" id="id_product" class="form-select" data-script-switch data-price-product>
+                <option value="">— غير محدد —</option>
+                {% for p in products %}
+                  <option value="{{ p.pk }}" data-price="{{ p.monthly_price|floatformat:'-2u' }}" {% if form.product.value|stringformat:"s" == p.pk|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>
+                {% endfor %}
+              </select>
+              {% for error in form.product.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-md-7">{% field form.notes %}</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer bg-transparent d-flex flex-wrap gap-2 align-items-center">
+        <button type="submit" class="btn btn-primary px-4" data-submit-label><i class="bi bi-check2"></i> حفظ{% if queue_mode %} والانتقال للتالي{% endif %}</button>
+        {% if queue_mode %}<a class="btn btn-light border" href="{% url 'queue_next' %}?skip={{ customer.pk }}">تخطي بدون حفظ</a>{% endif %}
+      </div>
+    </form>
+
+    {% if recent_calls %}
+    <div class="card">
+      <div class="card-header"><i class="bi bi-clock-history text-primary"></i> آخر المكالمات معه</div>
+      <ul class="list-group list-group-flush">
+        {% for call in recent_calls %}
+        <li class="list-group-item">
+          <div class="d-flex flex-wrap gap-2 align-items-center">
+            <span class="pill {{ call.outcome|outcome_class }}">{{ call.get_outcome_display }}</span>
+            <span class="small text-muted">{{ call.created_at|smart_dt }} · {{ call.agent.short_name|default:"" }}{% if call.product %} · {{ call.product.name }}{% endif %}</span>
+          </div>
+          {% if call.rejection_reason %}<div class="small mt-1">السبب: {{ call.rejection_reason.text }}{% if call.rejection_detail %} — {{ call.rejection_detail }}{% endif %}</div>{% endif %}
+          {% if call.notes %}<div class="small mt-1 pre-line">{{ call.notes }}</div>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-5">
+    <div class="sticky-side d-flex flex-column gap-3">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-file-text text-primary"></i> نص المكالمة</div>
+        <div class="card-body">
+          {% for p in products %}
+            <div data-script-for="{{ p.pk }}" hidden>
+              <div class="small text-muted mb-2">{{ p.name }}{% if p.monthly_price %} · من {{ p.monthly_price|money }} شهرياً{% endif %}</div>
+              {% if p.call_script %}<div class="script-box">{{ p.call_script }}</div>{% else %}<div class="text-muted small">لم يُكتب نص مكالمة لهذا التطبيق بعد.</div>{% endif %}
+            </div>
+          {% endfor %}
+          <div data-script-for="none">
+            <div class="script-box">١. أول 10 ثواني: فائدة واضحة لمصلحته، مش تعريف بالشركة.
+٢. اطلب الإذن: «بعرف إنك مشغول، بتعطيني 30 ثانية؟»
+٣. اسأل عن وضعه الحالي: شو بيستعمل هلأ؟ مين صاحب القرار؟
+٤. لا تنهي المكالمة بدون خطوة تالية واضحة: موعد قريب، أو يوم وساعة للاتصال.</div>
+            <div class="small text-muted mt-2">اختر التطبيق في النموذج ليظهر نصّه الخاص.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><i class="bi bi-chat-square-quote text-primary"></i> الردود على الاعتراضات</div>
+        <div class="accordion accordion-flush" id="objections">
+          {% for p in products %}
+            {% for o in p.objections.all %}
+            <div class="accordion-item" data-script-for="{{ p.pk }}" hidden>
+              <h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#obj-p{{ o.pk }}">«{{ o.objection }}»</button></h3>
+              <div id="obj-p{{ o.pk }}" class="accordion-collapse collapse" data-bs-parent="#objections"><div class="accordion-body pre-line">{{ o.response }}</div></div>
+            </div>
+            {% endfor %}
+          {% endfor %}
+          {% for o in general_objections %}
+            <div class="accordion-item">
+              <h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#obj-g{{ o.pk }}">«{{ o.objection }}»</button></h3>
+              <div id="obj-g{{ o.pk }}" class="accordion-collapse collapse" data-bs-parent="#objections"><div class="accordion-body pre-line">{{ o.response }}</div></div>
+            </div>
+          {% empty %}
+            <div class="empty py-3 small">لا توجد ردود محفوظة بعد.</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% if customer.notes %}
+      <div class="card">
+        <div class="card-header"><i class="bi bi-sticky text-warning"></i> ملاحظات عن العميل</div>
+        <div class="card-body pre-line small">{{ customer.notes }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

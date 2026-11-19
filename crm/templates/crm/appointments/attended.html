@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}نتيجة الموعد{% endblock %}
+{% block page_title %}كيف كان الموعد مع {{ appointment.customer.display_name }}؟{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 680px">
+  <form method="post" class="card-body" novalidate>
+    {% csrf_token %}
+    <p class="text-muted">{{ appointment.scheduled_at|smart_dt }} · {{ appointment.get_meeting_type_display }}</p>
+    {% field form.outcome_notes %}
+    <div class="row g-2">
+      <div class="col-md-6">{% field form.new_stage %}</div>
+      <div class="col-md-6">
+        {% field form.follow_up_at %}
+        <div class="quick-picks mt-n2 mb-3">
+          <button class="btn btn-light border" data-quick="tomorrow10" data-target="id_follow_up_at">غداً 10:00</button>
+          <button class="btn btn-light border" data-quick="2d" data-target="id_follow_up_at">بعد يومين</button>
+          <button class="btn btn-light border" data-quick="week" data-target="id_follow_up_at">بعد أسبوع</button>
+        </div>
+      </div>
+    </div>
+    <div class="hint mb-3">إذا اخترت «مشترك» سننقلك مباشرة لإضافة الاشتراك.</div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-success px-4" type="submit"><i class="bi bi-check2"></i> حفظ — حضر الموعد</button>
+      <a class="btn btn-light border" href="{% url 'appointment_detail' appointment.pk %}">رجوع</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

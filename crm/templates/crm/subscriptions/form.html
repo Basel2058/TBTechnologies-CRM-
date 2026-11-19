@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 720px">
+  <div class="card-header"><i class="bi bi-person text-primary"></i> {{ customer.display_name }}</div>
+  <form method="post" class="card-body" novalidate data-pricing>
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+    <div class="row g-2">
+      <div class="col-md-6 mb-3 {% if form.product.errors %}has-error{% endif %}">
+        <label class="form-label" for="id_product">التطبيق <span class="text-danger">*</span></label>
+        <select name="product" id="id_product" class="form-select" data-price-product required>
+          <option value="">— اختر —</option>
+          {% for p in products %}<option value="{{ p.pk }}" data-price="{{ p.monthly_price|floatformat:'-2u' }}" {% if form.product.value|stringformat:"s" == p.pk|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+        </select>
+        {% for error in form.product.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+      </div>
+      <div class="col-md-6 mb-3 {% if form.plan.errors %}has-error{% endif %}">
+        <label class="form-label" for="id_plan">الباقة</label>
+        <select name="plan" id="id_plan" class="form-select" data-price-plan>
+          <option value="">— بدون باقة —</option>
+          {% for p in plans %}<option value="{{ p.pk }}" data-product="{{ p.product_id }}" data-price="{{ p.monthly_price|floatformat:'-2u' }}" {% if form.plan.value|stringformat:"s" == p.pk|stringformat:"s" %}selected{% endif %}>{{ p.name }} ({{ p.monthly_price|money }})</option>{% endfor %}
+        </select>
+        {% for error in form.plan.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+      </div>
+      <div class="col-md-4">
+        <div class="mb-3 {% if form.monthly_price.errors %}has-error{% endif %}">
+          <label class="form-label" for="id_monthly_price">{{ form.monthly_price.label }} <span class="text-danger">*</span></label>
+          <input type="text" name="monthly_price" id="id_monthly_price" class="form-control" dir="ltr" inputmode="decimal" data-price-input value="{{ form.monthly_price.value|default_if_none:''|floatformat:'-2u' }}">
+          {% for error in form.monthly_price.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+        </div>
+      </div>
+      <div class="col-md-4">{% field form.start_date %}</div>
+      <div class="col-md-4">{% field form.status %}</div>
+      <div class="col-md-12">{% field form.notes %}</div>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary px-4" type="submit">حفظ</button>
+      <a class="btn btn-light border" href="{{ customer.get_absolute_url }}">إلغاء</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

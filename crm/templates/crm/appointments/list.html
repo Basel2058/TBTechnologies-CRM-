@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}المواعيد{% endblock %}
+{% block page_title %}المواعيد{% endblock %}
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="stat {% if needs_confirmation %}alerting{% endif %}">
+      <div class="stat-label"><i class="bi bi-patch-question"></i> تحتاج تأكيداً</div>
+      <div class="stat-value">{{ needs_confirmation.count }}</div>
+      <div class="stat-sub">مواعيد اليوم وغداً لم يؤكدها العميل</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat {% if needs_result %}alerting{% endif %}">
+      <div class="stat-label"><i class="bi bi-question-circle"></i> بانتظار النتيجة</div>
+      <div class="stat-value">{{ needs_result.count }}</div>
+      <div class="stat-sub">مضى وقتها — هل حضر؟</div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6">
+    <div class="stat">
+      <div class="stat-label"><i class="bi bi-person-x"></i> الغياب هذا الشهر</div>
+      <div class="stat-value">{% if month_resolved %}{% widthratio month_no_show month_resolved 100 %}%{% else %}—{% endif %}</div>
+      <div class="stat-sub">{{ month_no_show }} من {{ month_resolved }} موعد. التأكيد بالواتساب قبل يوم والموعد القريب يقللان الغياب.</div>
+    </div>
+  </div>
+</div>
+
+{% if needs_result %}
+<div class="card mb-3 border-danger-subtle">
+  <div class="card-header"><i class="bi bi-exclamation-circle text-danger"></i> مواعيد مضت — سجّل ماذا حصل</div>
+  <ul class="list-group list-group-flush">
+    {% for a in needs_result %}
+    <li class="list-group-item d-flex flex-wrap align-items-center gap-2">
+      <div class="flex-grow-1 min-w-0">
+        <a class="fw-semibold text-body" href="{% url 'appointment_detail' a.pk %}">{{ a.customer.display_name }}</a>
+        <span class="small text-muted">· {{ a.scheduled_at|smart_dt }} · {{ a.get_meeting_type_display }}</span>
+      </div>
+      <a class="btn btn-sm btn-outline-success" href="{% url 'appointment_attended' a.pk %}"><i class="bi bi-check2"></i> حضر</a>
+      <form method="post" action="{% url 'appointment_no_show' a.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-danger"><i class="bi bi-x"></i> لم يحضر</button></form>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if needs_confirmation %}
+<div class="card mb-3">
+  <div class="card-header"><i class="bi bi-patch-question text-warning"></i> تحتاج تأكيداً — أرسل تذكيراً واطلب منه 👍</div>
+  <ul class="list-group list-group-flush">
+    {% for a in needs_confirmation %}
+    <li class="list-group-item d-flex flex-wrap align-items-center gap-2">
+      <div class="flex-grow-1 min-w-0">
+        <a class="fw-semibold text-body" href="{% url 'appointment_detail' a.pk %}">{{ a.customer.display_name }}</a>
+        <span class="small text-muted">· {{ a.scheduled_at|smart_dt }}{% if a.last_whatsapp_at %} · <i class="bi bi-whatsapp"></i> آخر رسالة {{ a.last_whatsapp_at|smart_dt }}{% endif %}</span>
+      </div>
+      {% include "crm/_wa_menu.html" with templates=templates appointment=a size="btn-sm" label="تذكير" %}
+      <form method="post" action="{% url 'appointment_confirm' a.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn btn-sm btn-outline-primary"><i class="bi bi-check2-all"></i> أكّد</button></form>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header flex-wrap">
+    <i class="bi bi-calendar-week text-primary"></i> أسبوع {{ start|date:"d/m" }} – {{ last_day|date:"d/m" }}
+    <div class="header-actions">
+      <a class="btn btn-sm btn-light border" href="?start={{ prev_start|date:'Y-m-d' }}" aria-label="الأسبوع السابق"><i class="bi bi-chevron-right"></i></a>
+      <a class="btn btn-sm btn-light border" href="{% url 'appointment_list' %}">اليوم</a>
+      <a class="btn btn-sm btn-light border" href="?start={{ next_start|date:'Y-m-d' }}" aria-label="الأسبوع التالي"><i class="bi bi-chevron-left"></i></a>
+    </div>
+  </div>
+  {% for day, items in days %}
+  <div class="agenda-day d-flex {% if day == today %}is-today{% endif %}">
+    <div class="agenda-date">
+      <div class="dow">{{ day|weekday }}</div>
+      <div class="dm">{{ day|date:"d/m" }}</div>
+    </div>
+    <div class="flex-grow-1 min-w-0">
+      {% for a in items %}
+      <div class="appt-row">
+        <span class="appt-time">{{ a.scheduled_at|time:"H:i" }}</span>
+        <div class="flex-grow-1 min-w-0">
+          <a class="fw-semibold text-body" href="{% url 'appointment_detail' a.pk %}">{{ a.customer.display_name }}</a>
+          <div class="small text-muted">{{ a.get_meeting_type_display }}{% if a.location %} · {{ a.location|truncatechars:40 }}{% endif %}{% if a.presenter %} · يقدّمه {{ a.presenter.short_name }}{% endif %}</div>
+        </div>
+        <span class="pill {{ a.status|appt_class }}">{{ a.get_status_display }}</span>
+        {% if a.is_open %}{% include "crm/_wa_menu.html" with templates=templates appointment=a size="btn-sm" label="" %}{% endif %}
+      </div>
+      {% empty %}
+      <div class="appt-row text-muted small">لا مواعيد</div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

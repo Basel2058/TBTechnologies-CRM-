@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}غير مسموح{% endblock %}
+{% block page_title %}غير مسموح{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 560px"><div class="empty"><i class="bi bi-lock"></i>
+  <div class="fs-5 fw-semibold text-body">هذه الصفحة للمدير فقط</div>
+  <div class="mt-1">إذا كنت تحتاجها، اطلب من المدير.</div>
+  <a class="btn btn-primary btn-sm mt-3" href="{% url 'dashboard' %}">رجوع للصفحة الرئيسية</a>
+</div></div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% comment %}أشرطة أفقية لسلسلة واحدة (لون واحد). rows: [{label, value, width, share}]{% endcomment %}
+{% if rows %}
+<ul class="bar-list">
+  {% for row in rows %}
+  <li class="bar-row">
+    <span class="bar-label">{{ row.label }}</span>
+    <div class="bar-track" role="img" aria-label="{{ row.label }}: {% if money %}{{ row.value|money }}{% else %}{{ row.value }}{% endif %}">
+      <div class="bar-fill" style="width: calc({{ row.width|stringformat:'s' }}% * .78)"></div>
+      <span class="bar-value">{% if money %}{{ row.value|money }}{% else %}{{ row.value }}{% endif %}{% if show_share %}<span class="share">· {{ row.share }}%</span>{% endif %}{% if money and row.count %}<span class="share">· {{ row.count }} مشترك</span>{% endif %}</span>
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<div class="empty py-3">{{ empty_text|default:"لا بيانات في هذه الفترة." }}</div>
+{% endif %}

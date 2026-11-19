@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}المستخدمون{% endblock %}
+{% block page_title %}المستخدمون{% endblock %}
+{% block top_actions %}<a class="btn btn-primary btn-sm" href="{% url 'user_new' %}"><i class="bi bi-person-plus"></i> مستخدم جديد</a>{% endblock %}
+{% block content %}
+<div class="hint mb-3"><strong>المدير</strong> يرى كل شيء (التقارير، الإعدادات، التصدير، الحذف). <strong>موظف المبيعات</strong> يرى العملاء المسندين إليه فقط، ولا يستطيع الحذف أو تصدير القائمة.</div>
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead><tr><th>الاسم</th><th>اسم الدخول</th><th>الدور</th><th>عملاء مسندون</th><th>آخر دخول</th><th>الحالة</th><th></th></tr></thead>
+      <tbody>
+        {% for u in users %}
+        <tr class="{% if not u.is_active %}text-muted{% endif %}">
+          <td class="fw-semibold">{{ u.display_name }}</td>
+          <td><span class="ltr">{{ u.username }}</span></td>
+          <td>{% if u.is_manager %}<span class="pill stage-demo">مدير</span>{% else %}<span class="pill stage-interested">موظف مبيعات</span>{% endif %}</td>
+          <td class="tabular">{{ u.customers_count }}</td>
+          <td class="small">{{ u.last_login|smart_dt|default:"لم يدخل بعد" }}</td>
+          <td>{% if u.is_active %}<span class="pill stage-won">فعّال</span>{% else %}<span class="pill stage-new">موقوف</span>{% endif %}</td>
+          <td class="text-end text-nowrap">
+            <a class="btn btn-sm btn-light border" href="{% url 'user_edit' u.pk %}">تعديل</a>
+            <a class="btn btn-sm btn-light border" href="{% url 'user_password' u.pk %}">كلمة المرور</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

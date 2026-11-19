@@ -1,0 +1,7 @@
+{% if number %}
+<div class="phone-line">
+  <span class="{% if big %}phone-big{% else %}phone-number{% endif %}">{{ number|phone }}</span>
+  <button type="button" class="btn {% if dark %}btn-light{% else %}btn-light border{% endif %} icon-btn" data-copy="{{ number|phone_raw }}" title="نسخ الرقم" aria-label="نسخ الرقم"><i class="bi bi-copy"></i></button>
+  <a class="btn {% if dark %}btn-light{% else %}btn-light border{% endif %} icon-btn" href="{{ number|tel }}" title="اتصال" aria-label="اتصال"><i class="bi bi-telephone"></i></a>
+</div>
+{% endif %}

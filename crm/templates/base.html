@@ -1,0 +1,85 @@
+{% load static %}<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>{% block title %}{% endblock %} · {{ company_name }} CRM</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23256abf'/%3E%3Ctext x='32' y='42' font-size='26' font-family='Arial' font-weight='700' fill='white' text-anchor='middle'%3ETBT%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.rtl.min.css' %}">
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}">
+  <link rel="stylesheet" href="{% static 'crm/app.css' %}">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar offcanvas-lg offcanvas-start" tabindex="-1" id="sidebar" aria-label="القائمة الرئيسية">
+    <div class="offcanvas-header d-lg-none">
+      <a class="brand p-0" href="{% url 'dashboard' %}"><span class="brand-mark">TBT</span><span class="brand-name">{{ company_name }} CRM</span></a>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" aria-label="إغلاق"></button>
+    </div>
+    <a class="brand d-none d-lg-flex" href="{% url 'dashboard' %}">
+      <span class="brand-mark">TBT</span>
+      <span><span class="brand-name d-block">{{ company_name }} CRM</span><span class="brand-sub">إدارة العملاء والمبيعات</span></span>
+    </a>
+    {% with name=request.resolver_match.url_name %}
+    <nav class="side-nav nav flex-column">
+      <a class="nav-link {% if name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}"><i class="bi bi-house"></i> اليوم</a>
+      <a class="nav-link {% if name == 'queue' or name == 'call' %}active{% endif %}" href="{% url 'queue' %}"><i class="bi bi-telephone-outbound"></i> قائمة الاتصال {% if nav_due_count %}<span class="nav-count">{{ nav_due_count }}</span>{% endif %}</a>
+      <a class="nav-link {% if name == 'customer_list' or name == 'customer_detail' or name == 'customer_edit' or name == 'customer_new' %}active{% endif %}" href="{% url 'customer_list' %}"><i class="bi bi-people"></i> العملاء</a>
+      <a class="nav-link {% if name == 'pipeline' %}active{% endif %}" href="{% url 'pipeline' %}"><i class="bi bi-kanban"></i> مراحل البيع</a>
+      <a class="nav-link {% if name and name|slice:':11' == 'appointment' %}active{% endif %}" href="{% url 'appointment_list' %}"><i class="bi bi-calendar-event"></i> المواعيد {% if nav_appointments_count %}<span class="nav-count">{{ nav_appointments_count }}</span>{% endif %}</a>
+      <a class="nav-link {% if name == 'opportunities' %}active{% endif %}" href="{% url 'opportunities' %}"><i class="bi bi-stars"></i> فرص بيع</a>
+      <div class="nav-section">المنتجات والإيرادات</div>
+      <a class="nav-link {% if name and name|slice:':7' == 'product' %}active{% endif %}" href="{% url 'product_list' %}"><i class="bi bi-grid"></i> التطبيقات</a>
+      <a class="nav-link {% if name and name|slice:':12' == 'subscription' %}active{% endif %}" href="{% url 'subscription_list' %}"><i class="bi bi-credit-card"></i> الاشتراكات</a>
+      {% if user.is_manager %}
+      <div class="nav-section">الإدارة</div>
+      <a class="nav-link {% if name == 'reports' %}active{% endif %}" href="{% url 'reports' %}"><i class="bi bi-bar-chart-line"></i> التقارير</a>
+      <a class="nav-link {% if name == 'import_upload' or name == 'import_map' %}active{% endif %}" href="{% url 'import_upload' %}"><i class="bi bi-file-earmark-arrow-up"></i> استيراد عملاء</a>
+      <a class="nav-link {% if name and name|slice:':8' == 'settings' or name and name|slice:':4' == 'user' %}active{% endif %}" href="{% url 'settings' %}"><i class="bi bi-gear"></i> الإعدادات</a>
+      {% endif %}
+    </nav>
+    {% endwith %}
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="btn btn-light icon-btn d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar" aria-label="فتح القائمة"><i class="bi bi-list fs-5"></i></button>
+      <h1 class="page-title text-truncate">{% block page_title %}{% endblock %}</h1>
+      <div class="ms-auto d-flex align-items-center gap-2">
+        {% block top_actions %}{% endblock %}
+        <div class="dropdown">
+          <button class="btn btn-light btn-sm dropdown-toggle d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-person-circle"></i><span class="d-none d-sm-inline">{{ user.display_name }}</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><span class="dropdown-item-text small text-muted">{{ user.display_name }} · {{ user.get_role_display }}</span></li>
+            {% if user.is_superuser %}<li><a class="dropdown-item" href="{% url 'admin:index' %}"><i class="bi bi-tools"></i> الإدارة المتقدمة</a></li>{% endif %}
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <form method="post" action="{% url 'logout' %}">{% csrf_token %}
+                <button type="submit" class="dropdown-item text-danger"><i class="bi bi-box-arrow-left"></i> تسجيل الخروج</button>
+              </form>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      {% if wa_prompt %}{% include "crm/_wa_prompt.html" %}{% endif %}
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="إغلاق"></button>
+        </div>
+      {% endfor %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+<script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'crm/app.js' %}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

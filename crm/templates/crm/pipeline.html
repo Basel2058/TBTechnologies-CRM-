@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}مراحل البيع{% endblock %}
+{% block page_title %}مراحل البيع{% endblock %}
+{% block content %}
+<form method="get" class="filter-row mb-3">
+  <select name="product" class="form-select form-select-sm" data-autosubmit aria-label="التطبيق">
+    <option value="">كل التطبيقات</option>
+    {% for p in products %}<option value="{{ p.pk }}" {% if selected_product == p.pk|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+  </select>
+  {% if user.is_manager %}
+  <select name="agent" class="form-select form-select-sm" data-autosubmit aria-label="الموظف">
+    <option value="">كل الموظفين</option>
+    {% for a in agents %}<option value="{{ a.pk }}" {% if selected_agent == a.pk|stringformat:"s" %}selected{% endif %}>{{ a.display_name }}</option>{% endfor %}
+  </select>
+  {% endif %}
+  <span class="small text-muted"><i class="bi bi-arrows-move"></i> اسحب البطاقة لتغيير مرحلة العميل</span>
+</form>
+<div id="kanban-toast" hidden></div>
+
+<div class="kanban" data-kanban>
+  {% for col in columns %}
+  <section class="kanban-col" data-stage="{{ col.value }}" data-total="{{ col.count }}" aria-label="{{ col.label }}">
+    <header class="kanban-col-header">
+      <span class="stage-dot dot-{{ col.value }}"></span> {{ col.label }}
+      <span class="count" data-count>{{ col.count }}</span>
+    </header>
+    <div class="kanban-col-body">
+      {% for c in col.items %}
+      <a class="kanban-card" href="{{ c.get_absolute_url }}" draggable="true" data-id="{{ c.pk }}" data-name="{{ c.display_name }}" data-stage-url="{% url 'customer_stage' c.pk %}">
+        <div class="name">{{ c.display_name }}</div>
+        <div class="meta">
+          {% if c.product %}<span><i class="bi bi-grid"></i> {{ c.product.name }}</span>{% endif %}
+          {% if c.city %}<span><i class="bi bi-geo-alt"></i> {{ c.city }}</span>{% endif %}
+          {% if c.next_call_at %}<span class="{% if c.next_call_at|is_overdue %}overdue{% endif %}"><i class="bi bi-telephone"></i> {{ c.next_call_at|smart_dt }}</span>{% endif %}
+          {% if col.value == "lost" and c.lost_reason %}<span>{{ c.lost_reason.text }}</span>{% endif %}
+          {% if user.is_manager and c.assigned_to %}<span><i class="bi bi-person"></i> {{ c.assigned_to.short_name }}</span>{% endif %}
+        </div>
+      </a>
+      {% endfor %}
+      {% if col.hidden > 0 %}
+        <a class="d-block text-center small py-2" href="{% url 'customer_list' %}?stage={{ col.value }}{% if selected_product %}&product={{ selected_product }}{% endif %}">+ {{ col.hidden }} آخرين — عرض الكل</a>
+      {% endif %}
+    </div>
+  </section>
+  {% endfor %}
+</div>
+
+<dialog id="lost-dialog" class="tbt-dialog" aria-labelledby="lost-dialog-title">
+  <form method="dialog" class="p-3">
+    <div class="fw-bold mb-2" id="lost-dialog-title">لماذا رفض العميل؟</div>
+    <select class="form-select mb-3" aria-label="سبب الرفض">
+      <option value="">— بدون سبب —</option>
+      {% for r in reasons %}<option value="{{ r.pk }}">{{ r.text }}</option>{% endfor %}
+    </select>
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary" value="ok">نقل إلى «غير مهتم»</button>
+      <button class="btn btn-light border" value="cancel">إلغاء</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}

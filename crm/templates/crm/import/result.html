@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}نتيجة الاستيراد{% endblock %}
+{% block page_title %}نتيجة الاستيراد{% endblock %}
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-sm-4"><div class="stat"><div class="stat-label"><i class="bi bi-check2-circle text-success"></i> أُضيفوا</div><div class="stat-value">{{ result.created }}</div><div class="stat-sub">عميل جديد</div></div></div>
+  <div class="col-sm-4"><div class="stat"><div class="stat-label"><i class="bi bi-files"></i> مكررون (لم يُضافوا)</div><div class="stat-value">{{ result.duplicates|length }}</div><div class="stat-sub">موجودون مسبقاً أو مكررون في الملف</div></div></div>
+  <div class="col-sm-4"><div class="stat"><div class="stat-label"><i class="bi bi-exclamation-triangle text-warning"></i> صفوف مرفوضة</div><div class="stat-value">{{ result.invalid|length }}</div><div class="stat-sub">بدون رقم هاتف صحيح</div></div></div>
+</div>
+<div class="d-flex gap-2 mb-3">
+  <a class="btn btn-primary" href="{% url 'customer_list' %}?order=-created_at"><i class="bi bi-people"></i> عرض العملاء</a>
+  <a class="btn btn-light border" href="{% url 'queue' %}"><i class="bi bi-telephone-outbound"></i> قائمة الاتصال</a>
+  <a class="btn btn-light border" href="{% url 'import_upload' %}">استيراد ملف آخر</a>
+</div>
+{% if result.duplicates %}
+<div class="card mb-3">
+  <div class="card-header">الأرقام المكررة</div>
+  <div class="table-responsive">
+    <table class="table table-sm">
+      <thead><tr><th>الصف</th><th>الاسم</th><th>الهاتف</th><th>موجود عند</th></tr></thead>
+      <tbody>
+        {% for d in result.duplicates|slice:":200" %}
+        <tr><td class="tabular">{{ d.line }}</td><td>{{ d.name|default:"—" }}</td><td><span class="phone-number">{{ d.phone }}</span></td>
+          <td>{% if d.existing_id %}<a href="{% url 'customer_detail' d.existing_id %}">عميل موجود</a>{% else %}مكرر في الصف {{ d.same_file_line }}{% endif %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% if result.invalid %}
+<div class="card">
+  <div class="card-header">صفوف لم تُستورد</div>
+  <div class="table-responsive">
+    <table class="table table-sm">
+      <thead><tr><th>الصف</th><th>الاسم</th><th>المشكلة</th></tr></thead>
+      <tbody>{% for r in result.invalid|slice:":200" %}<tr><td class="tabular">{{ r.line }}</td><td>{{ r.name|default:"—" }}</td><td>{{ r.problem }}</td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

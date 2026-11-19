@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}قائمة الاتصال{% endblock %}
+{% block page_title %}قائمة الاتصال{% endblock %}
+{% block top_actions %}
+  <a href="{% url 'queue_next' %}?reset=1" class="btn btn-primary"><i class="bi bi-play-fill"></i> ابدأ الاتصال</a>
+{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <div class="hint flex-grow-1"><i class="bi bi-lightbulb"></i>
+    الترتيب تلقائي: المتابعات المستحقة أولاً، ثم العملاء الجدد. «ابدأ الاتصال» يفتح العميل التالي مباشرة بعد كل مكالمة.
+    من لا يرد يعود للقائمة وحده بعد يوم، ثم يومين، ثم 3 أيام.
+  </div>
+  {% if user.is_manager %}
+  <form method="get" class="filter-row">
+    <label class="small text-muted" for="agent">قائمة:</label>
+    <select name="agent" id="agent" class="form-select form-select-sm" data-autosubmit>
+      <option value="" {% if not selected_agent %}selected{% endif %}>كل الفريق</option>
+      <option value="me" {% if selected_agent == "me" %}selected{% endif %}>عملائي أنا</option>
+      {% for a in agents %}<option value="{{ a.pk }}" {% if selected_agent == a.pk|stringformat:"s" %}selected{% endif %}>{{ a.display_name }}</option>{% endfor %}
+    </select>
+  </form>
+  {% endif %}
+</div>
+{% if skipped_count %}
+  <div class="alert alert-light border py-2 small">تخطيت {{ skipped_count }} عميل اليوم في وضع الاتصال. <a href="{% url 'queue_next' %}?reset=1">ابدأ من جديد بدون تخطي</a></div>
+{% endif %}
+
+<div class="card mb-3">
+  <div class="card-header"><i class="bi bi-alarm text-danger"></i> مستحق الآن <span class="pill stage-lost">{{ due_count }}</span></div>
+  {% if due %}
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead><tr><th>العميل</th><th>الهاتف</th><th>موعد الاتصال</th><th>آخر نتيجة</th><th>المرحلة</th>{% if user.is_manager %}<th>الموظف</th>{% endif %}<th></th></tr></thead>
+      <tbody>
+      {% for c in due %}
+        <tr>
+          <td><a class="fw-semibold text-body" href="{{ c.get_absolute_url }}">{{ c.display_name }}</a>
+            {% if c.contact_name and c.business_name %}<div class="small text-muted">{{ c.contact_name }}</div>{% endif %}</td>
+          <td><span class="phone-number">{{ c.phone|phone }}</span></td>
+          <td class="{% if c.next_call_at|is_overdue %}overdue{% endif %}">{{ c.next_call_at|smart_dt }}</td>
+          <td>{% if c.last_outcome %}<span class="pill {{ c.last_outcome|outcome_class }}">{{ c.last_outcome_label }}{% if c.unanswered_attempts %} · محاولة {{ c.unanswered_attempts }}{% endif %}</span>{% else %}<span class="text-muted small">—</span>{% endif %}</td>
+          <td><span class="pill {{ c.stage|stage_class }}">{{ c.get_stage_display }}</span></td>
+          {% if user.is_manager %}<td class="small">{{ c.assigned_to.display_name|default:"—" }}</td>{% endif %}
+          <td class="text-end"><a class="btn btn-sm btn-primary" href="{% url 'call' c.pk %}"><i class="bi bi-telephone"></i> اتصل</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="empty"><i class="bi bi-check2-circle"></i>لا يوجد متابعات مستحقة الآن.</div>
+  {% endif %}
+</div>
+
+{% if later %}
+<div class="card mb-3">
+  <div class="card-header"><i class="bi bi-clock text-primary"></i> لاحقاً اليوم <span class="pill stage-interested">{{ later|length }}</span></div>
+  <ul class="list-group list-group-flush">
+    {% for c in later %}
+    <li class="list-group-item d-flex align-items-center gap-3">
+      <span class="appt-time">{{ c.next_call_at|time:"H:i" }}</span>
+      <div class="flex-grow-1 min-w-0">
+        <a class="fw-semibold text-body" href="{{ c.get_absolute_url }}">{{ c.display_name }}</a>
+        <span class="small text-muted">· <span class="phone-number fw-normal">{{ c.phone|phone }}</span>{% if c.last_outcome %} · {{ c.last_outcome_label }}{% endif %}</span>
+      </div>
+      <a class="btn btn-sm btn-light border" href="{% url 'call' c.pk %}">اتصل الآن</a>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header"><i class="bi bi-person-plus text-success"></i> عملاء جدد لم نتصل بهم <span class="pill stage-new">{{ new_count }}</span>
+    {% if new_count > new|length %}<div class="header-actions small text-muted">يظهر أول {{ new|length }}</div>{% endif %}
+  </div>
+  {% if new %}
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead><tr><th>العميل</th><th>الهاتف</th><th>المدينة</th><th>نوع المصلحة</th><th>التطبيق</th>{% if user.is_manager %}<th>الموظف</th>{% endif %}<th></th></tr></thead>
+      <tbody>
+      {% for c in new %}
+        <tr>
+          <td><a class="fw-semibold text-body" href="{{ c.get_absolute_url }}">{{ c.display_name }}</a>
+            {% if c.contact_name and c.business_name %}<div class="small text-muted">{{ c.contact_name }}</div>{% endif %}</td>
+          <td><span class="phone-number">{{ c.phone|phone }}</span></td>
+          <td>{{ c.city|default:"—" }}</td>
+          <td>{{ c.sector.name|default:"—" }}</td>
+          <td>{{ c.product.name|default:"—" }}</td>
+          {% if user.is_manager %}<td class="small">{{ c.assigned_to.display_name|default:"—" }}</td>{% endif %}
+          <td class="text-end"><a class="btn btn-sm btn-light border" href="{% url 'call' c.pk %}"><i class="bi bi-telephone"></i> اتصل</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="empty"><i class="bi bi-inbox"></i>لا يوجد عملاء جدد.{% if user.is_manager %} <a href="{% url 'import_upload' %}">استورد قائمة</a>{% endif %}</div>
+  {% endif %}
+</div>
+{% endblock %}

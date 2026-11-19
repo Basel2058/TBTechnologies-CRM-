@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block content %}
+<form method="post" novalidate style="max-width: 980px">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  <div class="card mb-3">
+    <div class="card-header"><i class="bi bi-person-vcard text-primary"></i> البيانات الأساسية</div>
+    <div class="card-body row g-2">
+      <div class="col-md-6">{% field form.business_name %}</div>
+      <div class="col-md-6">{% field form.contact_name %}</div>
+      <div class="col-md-4">{% field form.phone %}</div>
+      <div class="col-md-4">{% field form.phone_alt %}</div>
+      <div class="col-md-4">{% field form.email %}</div>
+      <div class="col-md-4">{% field form.city %}</div>
+      <div class="col-md-8">{% field form.address %}</div>
+    </div>
+  </div>
+  <div class="card mb-3">
+    <div class="card-header"><i class="bi bi-shop text-primary"></i> المصلحة والبيع</div>
+    <div class="card-body row g-2">
+      <div class="col-md-4">{% field form.sector %}</div>
+      <div class="col-6 col-md-2">{% field form.employees_count %}</div>
+      <div class="col-6 col-md-2">{% field form.branches_count %}</div>
+      <div class="col-md-4">{% field form.product %}</div>
+      {% if form.assigned_to %}<div class="col-md-4">{% field form.assigned_to %}</div>{% endif %}
+      <div class="col-md-4">{% field form.source %}</div>
+      <div class="col-md-4">{% field form.language %}</div>
+    </div>
+  </div>
+  <div class="card mb-3">
+    <div class="card-header"><i class="bi bi-arrow-left-right text-primary"></i> وضعه الحالي وصاحب القرار</div>
+    <div class="card-body row g-2">
+      <div class="col-md-4">{% field form.current_solution %}</div>
+      <div class="col-md-4">{% field form.competitor_name %}</div>
+      <div class="col-md-4">{% field form.contract_end_date %}</div>
+      <div class="col-md-4">{% field form.decision_maker_name %}</div>
+      <div class="col-md-4">{% field form.decision_maker_phone %}</div>
+      <div class="col-md-4">{% field form.quiet_hours %}</div>
+    </div>
+  </div>
+  <div class="card mb-3">
+    <div class="card-header"><i class="bi bi-sticky text-primary"></i> أخرى</div>
+    <div class="card-body row g-2">
+      <div class="col-md-12">{% field form.tags %}</div>
+      <div class="col-md-12">{% field form.notes %}</div>
+    </div>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <button class="btn btn-primary px-4" type="submit">حفظ</button>
+    {% if not customer %}<button class="btn btn-outline-primary" type="submit" name="call_now" value="1"><i class="bi bi-telephone"></i> حفظ واتصل الآن</button>{% endif %}
+    <a class="btn btn-light border" href="{% if customer %}{{ customer.get_absolute_url }}{% else %}{% url 'customer_list' %}{% endif %}">إلغاء</a>
+  </div>
+</form>
+{% endblock %}

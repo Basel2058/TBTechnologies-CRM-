@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}الاشتراكات{% endblock %}
+{% block page_title %}الاشتراكات{% endblock %}
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-sm-6 col-lg-4">
+    <div class="stat">
+      <div class="stat-label"><i class="bi bi-cash-stack"></i> الدخل الشهري الثابت</div>
+      <div class="stat-value">{{ mrr|money }}</div>
+      <div class="stat-sub">مجموع الاشتراكات الفعّالة</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-4">
+    <div class="stat">
+      <div class="stat-label"><i class="bi bi-people"></i> اشتراكات فعّالة</div>
+      <div class="stat-value">{{ active_count }}</div>
+      <div class="stat-sub">{% if user.is_manager %}كل العملاء{% else %}عملاؤك{% endif %}</div>
+    </div>
+  </div>
+</div>
+<form method="get" class="filter-row mb-3">
+  <div class="segmented">
+    {% for value, label in statuses %}<a href="?status={{ value }}{% if selected_product %}&product={{ selected_product }}{% endif %}" class="{% if status == value %}active{% endif %}">{{ label }}</a>{% endfor %}
+    <a href="?status=all{% if selected_product %}&product={{ selected_product }}{% endif %}" class="{% if status == 'all' %}active{% endif %}">الكل</a>
+  </div>
+  <input type="hidden" name="status" value="{{ status }}">
+  <select name="product" class="form-select form-select-sm" data-autosubmit aria-label="التطبيق">
+    <option value="">كل التطبيقات</option>
+    {% for p in products %}<option value="{{ p.pk }}" {% if selected_product == p.pk|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+  </select>
+</form>
+<div class="card">
+  {% if subscriptions %}
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead><tr><th>العميل</th><th>التطبيق</th><th>السعر الشهري</th><th>البداية</th><th>الحالة</th>{% if user.is_manager %}<th></th>{% endif %}</tr></thead>
+      <tbody>
+        {% for s in subscriptions %}
+        <tr>
+          <td><a class="fw-semibold text-body" href="{{ s.customer.get_absolute_url }}">{{ s.customer.display_name }}</a></td>
+          <td>{{ s.product.name }}{% if s.plan %} <span class="small text-muted">· {{ s.plan.name }}</span>{% endif %}</td>
+          <td class="tabular">{{ s.monthly_price|money }}</td>
+          <td>{{ s.start_date|date:"d/m/Y" }}</td>
+          <td><span class="pill sub-{{ s.status }}">{{ s.get_status_display }}</span>
+            {% if s.status == "cancelled" %}<div class="small text-muted">{{ s.cancelled_at|date:"d/m/Y" }}{% if s.cancel_reason %} · {{ s.cancel_reason.text }}{% endif %}</div>{% endif %}</td>
+          {% if user.is_manager %}<td class="text-end"><a class="btn btn-sm btn-light border" href="{% url 'subscription_edit' s.pk %}">تعديل</a>
+            {% if s.status != "cancelled" %}<a class="btn btn-sm btn-outline-danger" href="{% url 'subscription_cancel' s.pk %}">إلغاء</a>{% endif %}</td>{% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="empty"><i class="bi bi-credit-card"></i>لا يوجد اشتراكات بهذه الحالة.</div>
+  {% endif %}
+</div>
+{% endblock %}

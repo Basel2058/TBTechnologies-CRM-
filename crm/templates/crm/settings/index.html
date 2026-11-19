@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}الإعدادات{% endblock %}
+{% block page_title %}الإعدادات{% endblock %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-md-6 col-xl-4"><a class="stat" href="{% url 'user_list' %}"><div class="stat-label"><i class="bi bi-people"></i> المستخدمون</div><div class="fw-semibold mt-1">حسابات الموظفين وكلمات المرور</div><div class="stat-sub">{{ counts.users }} حساب فعّال</div></a></div>
+  <div class="col-md-6 col-xl-4"><a class="stat" href="{% url 'settings_reasons' %}"><div class="stat-label"><i class="bi bi-list-check"></i> أسباب الرفض والإلغاء</div><div class="fw-semibold mt-1">القائمة التي يختار منها الموظف</div><div class="stat-sub">{{ counts.reasons }} سبب فعّال</div></a></div>
+  <div class="col-md-6 col-xl-4"><a class="stat" href="{% url 'settings_templates' %}"><div class="stat-label"><i class="bi bi-whatsapp"></i> رسائل واتساب الجاهزة</div><div class="fw-semibold mt-1">تأكيد، تذكير، بعد الغياب...</div><div class="stat-sub">{{ counts.templates }} رسالة</div></a></div>
+  <div class="col-md-6 col-xl-4"><a class="stat" href="{% url 'settings_objections' %}"><div class="stat-label"><i class="bi bi-chat-square-quote"></i> الردود على الاعتراضات</div><div class="fw-semibold mt-1">تظهر للموظف أثناء المكالمة</div><div class="stat-sub">{{ counts.objections }} رد</div></a></div>
+  <div class="col-md-6 col-xl-4"><a class="stat" href="{% url 'settings_sectors' %}"><div class="stat-label"><i class="bi bi-shop"></i> أنواع المصالح</div><div class="fw-semibold mt-1">تصنيف العملاء</div><div class="stat-sub">{{ counts.sectors }} نوع</div></a></div>
+  <div class="col-md-6 col-xl-4"><a class="stat" href="{% url 'import_upload' %}"><div class="stat-label"><i class="bi bi-file-earmark-arrow-up"></i> استيراد عملاء</div><div class="fw-semibold mt-1">من Excel أو CSV</div><div class="stat-sub">مع كشف الأرقام المكررة</div></a></div>
+  <div class="col-md-6 col-xl-4"><a class="stat" href="{% url 'customer_export' %}"><div class="stat-label"><i class="bi bi-file-earmark-excel"></i> تصدير العملاء</div><div class="fw-semibold mt-1">ملف Excel بكل العملاء</div><div class="stat-sub">للمدير فقط</div></a></div>
+  <div class="col-md-6 col-xl-4"><a class="stat" href="{% url 'settings_backup' %}"><div class="stat-label"><i class="bi bi-shield-check"></i> النسخ الاحتياطي</div><div class="fw-semibold mt-1">تنزيل نسخة كاملة من البيانات</div><div class="stat-sub">يُنصح أسبوعياً</div></a></div>
+</div>
+{% endblock %}

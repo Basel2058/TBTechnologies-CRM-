@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block content %}
+<form method="post" novalidate style="max-width: 980px">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+  <div class="card mb-3">
+    <div class="card-header"><i class="bi bi-grid text-primary"></i> التطبيق</div>
+    <div class="card-body row g-2">
+      <div class="col-md-6">{% field form.name %}</div>
+      <div class="col-md-3">{% field form.monthly_price %}</div>
+      <div class="col-md-3">{% field form.order %}</div>
+      <div class="col-md-12">{% field form.target_customers %}</div>
+      <div class="col-md-12">{% field form.description %}</div>
+      <div class="col-md-12">{% field form.is_active %}</div>
+    </div>
+  </div>
+  <div class="card mb-3">
+    <div class="card-header"><i class="bi bi-tags text-primary"></i> الباقات (اختياري)</div>
+    <div class="card-body">
+      {{ formset.management_form }}
+      {% if formset.non_form_errors %}<div class="alert alert-danger">{{ formset.non_form_errors|join:" " }}</div>{% endif %}
+      {% for f in formset %}
+        <div class="row g-2 align-items-end border-bottom pb-2 mb-2">
+          {{ f.id }}
+          <div class="col-md-5">{% field f.name %}</div>
+          <div class="col-md-3">{% field f.monthly_price %}</div>
+          <div class="col-md-2">{% field f.order %}</div>
+          <div class="col-md-2">{% if f.instance.pk %}{% field f.DELETE %}{% endif %}</div>
+        </div>
+      {% endfor %}
+      <div class="form-text">مثلاً: «أساسي 300 ₪» و«متقدم 600 ₪». لإضافة المزيد احفظ ثم عدّل مرة أخرى.</div>
+    </div>
+  </div>
+  <div class="card mb-3">
+    <div class="card-header"><i class="bi bi-file-text text-primary"></i> نص المكالمة</div>
+    <div class="card-body">
+      <div class="hint mb-3">يظهر للموظف أثناء المكالمة. اكتب: الجملة الافتتاحية (فائدة واضحة)، أسئلة لفهم وضع العميل، الفوائد، وكيف يطلب الموعد. الردود على الاعتراضات تُضاف من الإعدادات.</div>
+      {% field form.call_script %}
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary px-4" type="submit">حفظ</button>
+    <a class="btn btn-light border" href="{% if product %}{{ product.get_absolute_url }}{% else %}{% url 'product_list' %}{% endif %}">إلغاء</a>
+  </div>
+</form>
+{% endblock %}

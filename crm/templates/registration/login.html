@@ -1,0 +1,42 @@
+{% load static %}<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>تسجيل الدخول · {{ company_name }} CRM</title>
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.rtl.min.css' %}">
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}">
+  <link rel="stylesheet" href="{% static 'crm/app.css' %}">
+</head>
+<body>
+<div class="login-wrap">
+  <div class="card login-card shadow-lg">
+    <div class="card-body p-4 p-sm-5">
+      <div class="d-flex align-items-center gap-2 mb-4">
+        <span class="brand-mark">TBT</span>
+        <div>
+          <div class="fw-bold fs-5">{{ company_name }} CRM</div>
+          <div class="small text-muted">إدارة العملاء والمبيعات</div>
+        </div>
+      </div>
+      {% if form.errors %}
+        <div class="alert alert-danger py-2">اسم الدخول أو كلمة المرور غير صحيحة.</div>
+      {% endif %}
+      <form method="post" action="{% url 'login' %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+        <div class="mb-3">
+          <label class="form-label" for="id_username">اسم الدخول</label>
+          <input type="text" name="username" id="id_username" class="form-control form-control-lg" dir="ltr" autocomplete="username" autofocus required value="{{ form.username.value|default_if_none:'' }}">
+        </div>
+        <div class="mb-4">
+          <label class="form-label" for="id_password">كلمة المرور</label>
+          <input type="password" name="password" id="id_password" class="form-control form-control-lg" dir="ltr" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg w-100">دخول</button>
+      </form>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }}{% endblock %}
+{% block page_title %}{{ product.name }}{% endblock %}
+{% block top_actions %}{% if user.is_manager %}<a class="btn btn-light border btn-sm" href="{% url 'product_edit' product.pk %}"><i class="bi bi-pencil"></i> تعديل</a>{% endif %}{% endblock %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-body">
+        {% if product.target_customers %}<div class="small text-muted mb-1">لمن: {{ product.target_customers }}</div>{% endif %}
+        {% if product.description %}<p class="pre-line">{{ product.description }}</p>{% endif %}
+        <div class="d-flex flex-wrap gap-2">
+          <span class="pill tag-pill">السعر الأساسي: {{ product.monthly_price|money }} / شهر</span>
+          {% for plan in product.plans.all %}<span class="pill stage-new">{{ plan.name }}: {{ plan.monthly_price|money }}</span>{% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><i class="bi bi-file-text text-primary"></i> نص المكالمة</div>
+      <div class="card-body">
+        {% if product.call_script %}<div class="script-box" style="max-height:none">{{ product.call_script }}</div>{% else %}<div class="text-muted">لم يُكتب نص مكالمة بعد.</div>{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-chat-square-quote text-primary"></i> الردود على الاعتراضات
+        {% if user.is_manager %}<div class="header-actions"><a class="btn btn-sm btn-soft" href="{% url 'settings_objections_new' %}">إضافة</a></div>{% endif %}</div>
+      <div class="accordion accordion-flush" id="obj">
+        {% for o in product.objections.all %}
+        <div class="accordion-item">
+          <h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#o{{ o.pk }}">«{{ o.objection }}»</button></h3>
+          <div id="o{{ o.pk }}" class="accordion-collapse collapse" data-bs-parent="#obj"><div class="accordion-body pre-line">{{ o.response }}</div></div>
+        </div>
+        {% endfor %}
+        {% for o in general_objections %}
+        <div class="accordion-item">
+          <h3 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#o{{ o.pk }}">«{{ o.objection }}» <span class="small text-muted ms-2">عام</span></button></h3>
+          <div id="o{{ o.pk }}" class="accordion-collapse collapse" data-bs-parent="#obj"><div class="accordion-body pre-line">{{ o.response }}</div></div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

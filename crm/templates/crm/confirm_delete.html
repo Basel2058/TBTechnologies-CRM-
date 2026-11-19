@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}تأكيد الحذف{% endblock %}
+{% block page_title %}تأكيد الحذف{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 560px">
+  <div class="card-body">
+    <p class="fs-5 mb-2">هل تريد حذف «{{ object_name }}»؟</p>
+    {% if warning %}<div class="alert alert-warning">{{ warning }}</div>{% endif %}
+    <form method="post" class="d-flex gap-2">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">نعم، احذف</button>
+      <a class="btn btn-light border" href="{{ cancel_url }}">إلغاء</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

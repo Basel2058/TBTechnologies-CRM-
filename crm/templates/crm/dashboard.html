@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% block title %}اليوم{% endblock %}
+{% block page_title %}اليوم{% endblock %}
+{% block content %}
+{% now "G" as hour %}
+<div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+  <div class="flex-grow-1">
+    <div class="fs-4 fw-bold">{% if hour|add:0 < 12 %}صباح الخير{% else %}مساء الخير{% endif %}، {{ user.short_name }} 👋</div>
+    <div class="text-muted">{{ today|weekday }} {{ today|date:"d/m/Y" }}
+      {% if due_count %} · مستحق الآن: <strong class="text-body">{{ due_count }}</strong>{% endif %}
+      {% if new_count %} · عملاء جدد لم تتصل بهم: <strong class="text-body">{{ new_count }}</strong>{% endif %}
+    </div>
+  </div>
+  <a href="{% url 'queue_next' %}?reset=1" class="btn btn-primary btn-lg px-4"><i class="bi bi-telephone-outbound"></i> ابدأ الاتصال</a>
+</div>
+
+{% if setup_needed %}
+<div class="card mb-3 border-primary-subtle">
+  <div class="card-header"><i class="bi bi-rocket-takeoff text-primary"></i> لنجهّز النظام — 3 خطوات</div>
+  <div class="card-body py-2">
+    <div class="setup-step {% if setup.products %}done{% endif %}">
+      <span class="num">{% if setup.products %}<i class="bi bi-check2"></i>{% else %}1{% endif %}</span>
+      <div class="flex-grow-1"><div class="fw-semibold">أضف تطبيقاتك وأسعارها ونص المكالمة</div><div class="small text-muted">حتى يعرف الموظف ماذا يبيع وكيف يرد على الاعتراضات.</div></div>
+      {% if not setup.products %}<a class="btn btn-sm btn-soft" href="{% url 'product_new' %}">إضافة تطبيق</a>{% endif %}
+    </div>
+    <div class="setup-step {% if setup.agents %}done{% endif %}">
+      <span class="num">{% if setup.agents %}<i class="bi bi-check2"></i>{% else %}2{% endif %}</span>
+      <div class="flex-grow-1"><div class="fw-semibold">أنشئ حساباً لموظف الاتصال</div><div class="small text-muted">يرى العملاء المسندين إليه فقط، ولا يستطيع الحذف أو التصدير.</div></div>
+      {% if not setup.agents %}<a class="btn btn-sm btn-soft" href="{% url 'user_new' %}">إضافة موظف</a>{% endif %}
+    </div>
+    <div class="setup-step {% if setup.customers %}done{% endif %}">
+      <span class="num">{% if setup.customers %}<i class="bi bi-check2"></i>{% else %}3{% endif %}</span>
+      <div class="flex-grow-1"><div class="fw-semibold">استورد قائمة العملاء من Excel</div><div class="small text-muted">النظام يكتشف الأرقام المكررة تلقائياً.</div></div>
+      {% if not setup.customers %}<a class="btn btn-sm btn-soft" href="{% url 'import_upload' %}">استيراد</a>{% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-4 col-xl">
+    <a class="stat {% if due_count %}alerting{% endif %}" href="{% url 'queue' %}">
+      <div class="stat-label"><i class="bi bi-telephone-inbound"></i> مستحق الآن</div>
+      <div class="stat-value">{{ due_count }}</div>
+      <div class="stat-sub">{% if later_count %}و{{ later_count }} لاحقاً اليوم{% else %}متابعات ومحاولات{% endif %}</div>
+    </a>
+  </div>
+  <div class="col-6 col-md-4 col-xl">
+    <div class="stat">
+      <div class="stat-label"><i class="bi bi-telephone"></i> اتصالاتي اليوم</div>
+      <div class="stat-value">{{ my_today.total }}</div>
+      <div class="stat-sub">ردّ {{ my_today.answered }} · هذا الأسبوع {{ my_week.total }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-xl">
+    <div class="stat">
+      <div class="stat-label"><i class="bi bi-calendar-check"></i> مواعيد حجزتها اليوم</div>
+      <div class="stat-value">{{ my_today.demos }}</div>
+      <div class="stat-sub">هذا الأسبوع {{ my_week.demos }} · مبيعات {{ my_week.sales }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-6 col-xl">
+    <a class="stat" href="{% url 'appointment_list' %}">
+      <div class="stat-label"><i class="bi bi-calendar-event"></i> مواعيد اليوم</div>
+      <div class="stat-value">{{ today_appointments|length }}</div>
+      <div class="stat-sub">{% if needs_confirmation_count %}{{ needs_confirmation_count }} تحتاج تأكيداً{% else %}لا شيء يحتاج تأكيداً{% endif %}</div>
+    </a>
+  </div>
+  <div class="col-12 col-md-6 col-xl">
+    <a class="stat" href="{% url 'customer_list' %}?stage=new&followup=none">
+      <div class="stat-label"><i class="bi bi-person-plus"></i> عملاء جدد لم نتصل بهم</div>
+      <div class="stat-value">{{ new_count }}</div>
+      <div class="stat-sub">ينتظرون أول اتصال</div>
+    </a>
+  </div>
+</div>
+
+{% if user.is_manager %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <a class="stat" href="{% url 'subscription_list' %}">
+      <div class="stat-label"><i class="bi bi-cash-stack"></i> الدخل الشهري الثابت</div>
+      <div class="stat-value">{{ mrr|money }}</div>
+      <div class="stat-sub">{{ active_subscriptions }} اشتراك فعّال</div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat">
+      <div class="stat-label"><i class="bi bi-graph-up-arrow"></i> اشتراكات جديدة هذا الشهر</div>
+      <div class="stat-value">{{ new_this_month }}</div>
+      <div class="stat-sub">منذ بداية الشهر</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat">
+      <div class="stat-label"><i class="bi bi-people"></i> اتصالات الفريق اليوم</div>
+      <div class="stat-value">{{ team_today.total }}</div>
+      <div class="stat-sub">ردّ {{ team_today.answered }} · مواعيد {{ team_today.demos }} · مبيعات {{ team_today.sales }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a class="stat" href="{% url 'reports' %}?range=month">
+      <div class="stat-label"><i class="bi bi-person-x"></i> الغياب عن المواعيد (هذا الشهر)</div>
+      <div class="stat-value">{% if month_resolved %}{% widthratio month_no_show month_resolved 100 %}%{% else %}—{% endif %}</div>
+      <div class="stat-sub">{{ month_no_show }} من {{ month_resolved }} موعد</div>
+    </a>
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header">
+        <i class="bi bi-telephone-outbound text-primary"></i> اتصل الآن
+        <div class="header-actions"><a class="btn btn-sm btn-soft" href="{% url 'queue' %}">كل القائمة</a></div>
+      </div>
+      {% if due %}
+      <ul class="list-group list-group-flush">
+        {% for c in due %}
+        <li class="list-group-item d-flex align-items-center gap-3">
+          <div class="flex-grow-1 min-w-0">
+            <a class="fw-semibold text-body text-decoration-none" href="{{ c.get_absolute_url }}">{{ c.display_name }}</a>
+            {% if c.contact_name and c.business_name %}<span class="text-muted small">· {{ c.contact_name }}</span>{% endif %}
+            <div class="small text-muted d-flex flex-wrap gap-2">
+              <span class="phone-number fw-normal">{{ c.phone|phone }}</span>
+              <span class="{% if c.next_call_at|is_overdue %}overdue{% endif %}"><i class="bi bi-clock"></i> {{ c.next_call_at|smart_dt }}</span>
+              {% if c.last_outcome %}<span>آخر نتيجة: {{ c.last_outcome_label }}{% if c.unanswered_attempts %} ({{ c.unanswered_attempts }}){% endif %}</span>{% endif %}
+            </div>
+          </div>
+          <a class="btn btn-sm btn-primary" href="{% url 'call' c.pk %}"><i class="bi bi-telephone"></i> اتصل</a>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+        <div class="empty"><i class="bi bi-emoji-smile"></i>لا يوجد اتصالات مستحقة الآن.
+          {% if new_count %}<div class="mt-2"><a class="btn btn-sm btn-primary" href="{% url 'queue_next' %}?reset=1">اتصل بالعملاء الجدد ({{ new_count }})</a></div>{% endif %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-lg-5 d-flex flex-column gap-3">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-calendar-event text-primary"></i> مواعيد اليوم
+        <div class="header-actions"><a class="btn btn-sm btn-soft" href="{% url 'appointment_list' %}">كل المواعيد</a></div>
+      </div>
+      {% if today_appointments %}
+      <ul class="list-group list-group-flush">
+        {% for a in today_appointments %}
+        <li class="list-group-item d-flex align-items-center gap-2">
+          <span class="appt-time">{{ a.scheduled_at|time:"H:i" }}</span>
+          <div class="flex-grow-1 min-w-0">
+            <a class="fw-semibold text-body text-decoration-none" href="{% url 'appointment_detail' a.pk %}">{{ a.customer.display_name }}</a>
+            <div class="small text-muted">{{ a.get_meeting_type_display }}{% if a.presenter %} · {{ a.presenter.short_name }}{% endif %}</div>
+          </div>
+          <span class="pill {{ a.status|appt_class }}">{{ a.get_status_display }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+        <div class="empty py-3">لا مواعيد اليوم.</div>
+      {% endif %}
+    </div>
+
+    {% if needs_confirmation %}
+    <div class="card">
+      <div class="card-header"><i class="bi bi-patch-question text-warning"></i> تحتاج تأكيداً (اليوم وغداً)
+        <span class="pill appt-booked ms-auto">{{ needs_confirmation_count }}</span>
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for a in needs_confirmation %}
+        <li class="list-group-item d-flex flex-wrap align-items-center gap-2">
+          <div class="flex-grow-1 min-w-0">
+            <a class="fw-semibold text-body text-decoration-none" href="{% url 'appointment_detail' a.pk %}">{{ a.customer.display_name }}</a>
+            <div class="small text-muted">{{ a.scheduled_at|smart_dt }}{% if a.last_whatsapp_at %} · <i class="bi bi-whatsapp"></i> أُرسلت رسالة {{ a.last_whatsapp_at|smart_dt }}{% endif %}</div>
+          </div>
+          <a class="btn btn-sm btn-light border" href="{% url 'appointment_detail' a.pk %}">تأكيد / تذكير</a>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {% if needs_result %}
+    <div class="card">
+      <div class="card-header"><i class="bi bi-exclamation-circle text-danger"></i> مواعيد مضت — هل حضر العميل؟</div>
+      <ul class="list-group list-group-flush">
+        {% for a in needs_result %}
+        <li class="list-group-item d-flex flex-wrap align-items-center gap-2">
+          <div class="flex-grow-1 min-w-0">
+            <a class="fw-semibold text-body text-decoration-none" href="{% url 'appointment_detail' a.pk %}">{{ a.customer.display_name }}</a>
+            <div class="small text-muted">{{ a.scheduled_at|smart_dt }}</div>
+          </div>
+          <a class="btn btn-sm btn-outline-success" href="{% url 'appointment_attended' a.pk %}">حضر</a>
+          <form method="post" action="{% url 'appointment_no_show' a.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-danger">لم يحضر</button></form>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if user.is_manager and team %}
+<div class="card mt-3">
+  <div class="card-header"><i class="bi bi-people text-primary"></i> الفريق اليوم</div>
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead><tr><th>الموظف</th><th>اتصالات اليوم</th><th>ردّ</th><th>مواعيد حُجزت</th><th>عملاء مسندون</th></tr></thead>
+      <tbody>
+        {% for m in team %}
+        <tr>
+          <td class="fw-semibold">{{ m.display_name }} <span class="small text-muted">{{ m.get_role_display }}</span></td>
+          <td class="tabular">{{ m.calls_today }}</td>
+          <td class="tabular">{{ m.answered_today }}{% if m.calls_today %} <span class="text-muted small">({{ m.answered_today|percent:m.calls_today }}%)</span>{% endif %}</td>
+          <td class="tabular">{{ m.demos_today }}</td>
+          <td class="tabular">{{ m.customers_count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

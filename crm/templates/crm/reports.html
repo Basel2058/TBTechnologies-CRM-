@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% block title %}التقارير{% endblock %}
+{% block page_title %}التقارير{% endblock %}
+{% block content %}
+{# صف الفلاتر — يطبَّق على كل ما تحته #}
+<form method="get" class="card mb-3">
+  <div class="card-body py-2 filter-row">
+    <div class="segmented" role="group" aria-label="الفترة">
+      {% for value, label in presets %}
+        <a href="?range={{ value }}{% if selected_agent %}&agent={{ selected_agent }}{% endif %}{% if selected_product %}&product={{ selected_product }}{% endif %}" class="{% if preset == value %}active{% endif %}">{{ label }}</a>
+      {% endfor %}
+    </div>
+    <div class="d-flex align-items-center gap-1">
+      <input type="date" name="from" class="form-control form-control-sm" value="{{ start|date:'Y-m-d' }}" aria-label="من تاريخ" dir="ltr">
+      <span class="small text-muted">–</span>
+      <input type="date" name="to" class="form-control form-control-sm" value="{{ end|date:'Y-m-d' }}" aria-label="إلى تاريخ" dir="ltr">
+    </div>
+    <select name="agent" class="form-select form-select-sm" aria-label="الموظف">
+      <option value="">كل الموظفين</option>
+      {% for a in agents %}<option value="{{ a.pk }}" {% if selected_agent == a.pk|stringformat:"s" %}selected{% endif %}>{{ a.display_name }}</option>{% endfor %}
+    </select>
+    <select name="product" class="form-select form-select-sm" aria-label="التطبيق">
+      <option value="">كل التطبيقات</option>
+      {% for p in products %}<option value="{{ p.pk }}" {% if selected_product == p.pk|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+    </select>
+    <button class="btn btn-sm btn-primary" type="submit">عرض</button>
+    <span class="small text-muted ms-auto">{{ start|date:"d/m/Y" }} – {{ end|date:"d/m/Y" }}</span>
+  </div>
+</form>
+
+{# --- المكالمات --- #}
+<h2 class="section-title mb-2"><i class="bi bi-telephone text-primary"></i> المكالمات</h2>
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-4 col-xl-2"><div class="stat"><div class="stat-label">مكالمات</div><div class="stat-value">{{ stats.total }}</div><div class="stat-sub">في الفترة</div></div></div>
+  <div class="col-6 col-md-4 col-xl-2"><div class="stat"><div class="stat-label">نسبة الرد</div><div class="stat-value">{% if answer_rate is not None %}{{ answer_rate }}%{% else %}—{% endif %}</div><div class="stat-sub">ردّ {{ stats.answered }}</div></div></div>
+  <div class="col-6 col-md-4 col-xl-2"><div class="stat"><div class="stat-label">أبدوا اهتماماً</div><div class="stat-value">{% if interest_rate is not None %}{{ interest_rate }}%{% else %}—{% endif %}</div><div class="stat-sub">{{ stats.interested }} ممن ردّوا</div></div></div>
+  <div class="col-6 col-md-4 col-xl-2"><div class="stat"><div class="stat-label">مواعيد حُجزت</div><div class="stat-value">{{ stats.demos }}</div><div class="stat-sub">من المكالمات</div></div></div>
+  <div class="col-6 col-md-4 col-xl-2"><div class="stat"><div class="stat-label">مبيعات بالهاتف</div><div class="stat-value">{{ stats.sales }}</div><div class="stat-sub">«تم البيع»</div></div></div>
+  <div class="col-6 col-md-4 col-xl-2"><div class="stat"><div class="stat-label">نسبة التحويل</div><div class="stat-value">{% if conversion_rate is not None %}{{ conversion_rate }}%{% else %}—{% endif %}</div><div class="stat-sub">مبيعات ÷ من ردّوا</div></div></div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-xl-7">
+    <div class="card h-100">
+      <div class="card-header">عدد المكالمات {% if weekly %}أسبوعياً{% else %}يومياً{% endif %}</div>
+      <div class="card-body">
+        {% if stats.total %}
+        <div class="colchart-wrap">
+          <div class="colchart" role="img" aria-label="عدد المكالمات {% if weekly %}في كل أسبوع{% else %}في كل يوم{% endif %}، أعلى قيمة {{ timeline_peak }}">
+            <div class="gridline" style="bottom: 100%"><span>{{ timeline_peak }}</span></div>
+            <div class="gridline" style="bottom: 50%"><span>{% widthratio timeline_peak 2 1 %}</span></div>
+            {% for d in timeline %}
+              <div class="col" tabindex="0" data-tip-value="{{ d.value }} مكالمة" data-tip-label="{{ d.label }}" aria-label="{{ d.label }}: {{ d.value }} مكالمة">
+                <div class="fill" style="height: {{ d.height }}%"></div>
+              </div>
+            {% endfor %}
+          </div>
+          <div class="col-axis" aria-hidden="true">
+            {% for d in timeline %}<span>{% if forloop.first or forloop.last or timeline|length <= 14 %}{{ d.short }}{% endif %}</span>{% endfor %}
+          </div>
+        </div>
+        <details class="mt-3">
+          <summary class="small text-muted">عرض كجدول</summary>
+          <table class="table table-sm mt-2"><thead><tr><th>{% if weekly %}الأسبوع{% else %}اليوم{% endif %}</th><th>مكالمات</th></tr></thead>
+            <tbody>{% for d in timeline %}<tr><td>{{ d.label }}</td><td class="tabular">{{ d.value }}</td></tr>{% endfor %}</tbody></table>
+        </details>
+        {% else %}
+          <div class="empty">لا مكالمات في هذه الفترة.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-5">
+    <div class="card h-100">
+      <div class="card-header">نتائج المكالمات</div>
+      <div class="card-body">
+        {% include "crm/_bars.html" with rows=outcomes unit="" %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{# --- أسباب الرفض --- #}
+<h2 class="section-title mb-2"><i class="bi bi-hand-thumbs-down text-primary"></i> لماذا يرفض العملاء؟</h2>
+<div class="row g-3 mb-4">
+  <div class="col-xl-7">
+    <div class="card h-100">
+      <div class="card-header">أسباب الرفض <span class="small text-muted fw-normal">من {{ rejection_total }} رفض</span></div>
+      <div class="card-body">
+        {% include "crm/_bars.html" with rows=reasons show_share=True %}
+        {% if reasons %}<div class="hint mt-3"><i class="bi bi-lightbulb"></i> السبب الأول هنا هو أهم ما يجب العمل عليه: في السعر، أو نص المكالمة، أو التطبيق نفسه.</div>{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-5">
+    <div class="card h-100">
+      <div class="card-header">ماذا قالوا بالضبط؟ <span class="small text-muted fw-normal">(ميزة ناقصة، منافس، أخرى)</span></div>
+      {% if details %}
+      <ul class="list-group list-group-flush small" style="max-height: 360px; overflow-y: auto">
+        {% for c in details %}
+        <li class="list-group-item">
+          <div class="fw-semibold">{{ c.rejection_detail }}</div>
+          <div class="text-muted">{{ c.rejection_reason.text }} · <a href="{{ c.customer.get_absolute_url }}">{{ c.customer.display_name }}</a>{% if c.product %} · {{ c.product.name }}{% endif %} · {{ c.created_at|smart_dt:"date" }}</div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+        <div class="empty">لا تفاصيل مكتوبة في هذه الفترة.</div>
+      {% endif %}
+    </div>
+  </div>
+  {% if matrix %}
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">أسباب الرفض حسب التطبيق <span class="small text-muted fw-normal">(نسبة من رفض كل تطبيق)</span></div>
+      <div class="table-responsive">
+        <table class="table matrix">
+          <thead><tr><th>السبب</th>{% for p in matrix.products %}<th class="text-center">{{ p.name }}</th>{% endfor %}</tr></thead>
+          <tbody>
+            {% for row in matrix.rows %}
+            <tr><td class="text-start">{{ row.reason }}</td>{% for cell in row.cells %}<td class="{% if not cell %}cell-0{% endif %}">{{ cell }}%</td>{% endfor %}</tr>
+            {% endfor %}
+            <tr class="fw-semibold"><td class="text-start">عدد الرفض</td>{% for t in matrix.totals %}<td>{{ t }}</td>{% endfor %}</tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{# --- المواعيد --- #}
+<h2 class="section-title mb-2"><i class="bi bi-calendar-x text-primary"></i> المواعيد والغياب</h2>
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3"><div class="stat"><div class="stat-label">مواعيد انتهت</div><div class="stat-value">{{ appointments.total }}</div><div class="stat-sub">حضر أو لم يحضر</div></div></div>
+  <div class="col-6 col-md-3"><div class="stat"><div class="stat-label">حضر</div><div class="stat-value">{{ appointments.attended }}</div></div></div>
+  <div class="col-6 col-md-3"><div class="stat"><div class="stat-label">لم يحضر</div><div class="stat-value">{{ appointments.no_show }}</div></div></div>
+  <div class="col-6 col-md-3"><div class="stat {% if appointments.rate and appointments.rate >= 30 %}alerting{% endif %}"><div class="stat-label">نسبة الغياب</div><div class="stat-value">{% if appointments.rate is not None %}{{ appointments.rate }}%{% else %}—{% endif %}</div></div></div>
+</div>
+{% if appointments.total %}
+<div class="row g-3 mb-4">
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">الغياب حسب المدة بين الحجز والموعد</div><div class="card-body">{% include "crm/_meters.html" with rows=appointments.by_lead %}</div></div></div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">هل التأكيد المسبق يقلل الغياب؟</div><div class="card-body">{% include "crm/_meters.html" with rows=appointments.by_confirm %}</div></div></div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">الغياب حسب نوع الموعد</div><div class="card-body">{% include "crm/_meters.html" with rows=appointments.by_type %}</div></div></div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">الغياب حسب نوع المصلحة</div><div class="card-body">{% include "crm/_meters.html" with rows=appointments.by_sector %}</div></div></div>
+</div>
+{% else %}
+<div class="card mb-4"><div class="empty">لا مواعيد انتهت في هذه الفترة.</div></div>
+{% endif %}
+
+{# --- الإيرادات --- #}
+<h2 class="section-title mb-2"><i class="bi bi-cash-stack text-primary"></i> الإيرادات والاشتراكات</h2>
+<div class="row g-3 mb-3">
+  <div class="col-lg-4">
+    <div class="stat">
+      <div class="stat-label">الدخل الشهري الثابت (الآن)</div>
+      <div class="hero-figure mt-1">{{ revenue.mrr|money }}</div>
+      <div class="stat-sub">{{ revenue.active }} اشتراك فعّال</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-4">
+    <div class="stat">
+      <div class="stat-label">اشتراكات جديدة في الفترة</div>
+      <div class="stat-value">{{ revenue.new_count }}</div>
+      <div class="stat-sub">+{{ revenue.new_mrr|money }} شهرياً</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-4">
+    <div class="stat {% if revenue.cancel_count %}alerting{% endif %}">
+      <div class="stat-label">اشتراكات أُلغيت في الفترة</div>
+      <div class="stat-value">{{ revenue.cancel_count }}</div>
+      <div class="stat-sub">−{{ revenue.cancel_mrr|money }} شهرياً</div>
+    </div>
+  </div>
+</div>
+<div class="row g-3 mb-4">
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">الدخل الشهري حسب التطبيق</div><div class="card-body">{% include "crm/_bars.html" with rows=revenue.by_product money=True %}</div></div></div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">لماذا يلغون الاشتراك؟</div><div class="card-body">{% include "crm/_bars.html" with rows=revenue.cancel_reasons show_share=True empty_text="لا إلغاءات في هذه الفترة 👍" %}</div></div></div>
+</div>
+
+{# --- المراحل والفريق والمصالح --- #}
+<div class="row g-3 mb-3">
+  <div class="col-xl-5">
+    <h2 class="section-title mb-2"><i class="bi bi-kanban text-primary"></i> العملاء في كل مرحلة (الآن)</h2>
+    <div class="card"><div class="card-body">{% include "crm/_bars.html" with rows=stages %}</div></div>
+  </div>
+  <div class="col-xl-7">
+    <h2 class="section-title mb-2"><i class="bi bi-shop text-primary"></i> أي المصالح تشترك أكثر؟</h2>
+    <div class="card">
+      <div class="card-body">
+        {% if sector_rows %}
+          {% for r in sector_rows %}
+          <div class="meter-row">
+            <span class="bar-label">{{ r.label }}</span>
+            <div class="meter" role="img" aria-label="{{ r.label }}: {{ r.rate }}%"><span style="width: {{ r.rate }}%"></span></div>
+            <span class="meter-value">{{ r.rate }}% <small>({{ r.won }} من {{ r.total }})</small></span>
+          </div>
+          {% endfor %}
+          <div class="form-text mt-2">نسبة من أصبحوا مشتركين من بين من تم التواصل معهم. ركّز الاتصال على الأنواع ذات النسبة الأعلى.</div>
+        {% else %}
+          <div class="empty">لا بيانات بعد.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<h2 class="section-title mb-2 mt-4"><i class="bi bi-people text-primary"></i> أداء الموظفين في الفترة</h2>
+<div class="card mb-3">
+  {% if team %}
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead><tr><th>الموظف</th><th>مكالمات</th><th>ردّ</th><th>نسبة الرد</th><th>مواعيد</th><th>مبيعات</th></tr></thead>
+      <tbody>
+        {% for m in team %}
+        <tr>
+          <td class="fw-semibold">{{ m.display_name }}</td>
+          <td class="tabular">{{ m.total }}</td>
+          <td class="tabular">{{ m.answered }}</td>
+          <td class="tabular">{{ m.answered|percent:m.total }}%</td>
+          <td class="tabular">{{ m.demos }}</td>
+          <td class="tabular">{{ m.sales }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="empty">لا مكالمات في هذه الفترة.</div>
+  {% endif %}
+</div>
+{% endblock %}
